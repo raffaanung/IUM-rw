@@ -11,8 +11,14 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'name',
+        'username', // Ditambahkan karena ada di migration add_username_to_users_table
         'email',
         'password',
         'nik',
@@ -21,21 +27,40 @@ class User extends Authenticatable
         'warga_id',
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-    ];
-
-    public function warga()
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected function casts(): array
     {
-        return $this->belongsTo(Warga::class);
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
     }
 
+    /**
+     * Relasi ke data Warga (User terhubung ke satu data profil warga)
+     */
+    public function warga()
+    {
+        return $this->belongsTo(Warga::class, 'warga_id', 'id');
+    }
+
+    /**
+     * Relasi ke data Transaksi (User sebagai admin/pencatat yang membuat transaksi)
+     */
     public function transaksi()
     {
         return $this->hasMany(Transaksi::class, 'created_by');
