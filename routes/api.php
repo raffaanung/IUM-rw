@@ -2,76 +2,66 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\WargaController;
-use App\Http\Controllers\KartuKeluargaController;
-use App\Http\Controllers\TransaksiController;
 
-// Import Warga Role Controllers (Controller baru untuk Warga Read-Only)
-use App\Http\Controllers\Api\Warga\DashboardController;
-use App\Http\Controllers\Api\Warga\WargaListController;
-use App\Http\Controllers\Api\Warga\KeuanganController;
+// Warga Role Controllers (Read-Only)
+use App\Http\Controllers\Api\Warga\DashboardController as WargaDashboard;
+use App\Http\Controllers\Api\Warga\WargaListController as WargaList;
+use App\Http\Controllers\Api\Warga\KeuanganController as WargaKeuangan;
 
-// Public routes (tidak perlu login)
+// RT Role Controllers (CRUD)
+use App\Http\Controllers\Api\Rt\DashboardController as RtDashboard;
+use App\Http\Controllers\Api\Rt\WargaController as RtWarga;
+use App\Http\Controllers\Api\Rt\KartuKeluargaController as RtKK;
+use App\Http\Controllers\Api\Rt\KeuanganController as RtKeuangan;
+
+// Public routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 // Protected routes (harus login)
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Auth (Bisa diakses semua role)
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
     /**
-     * ==========================================
      * ENDPOINTS KHUSUS ROLE WARGA (Read-Only)
-     * ==========================================
      */
     Route::prefix('portal-warga')->middleware('role:warga')->group(function () {
-        
-        // 1. Dashboard Warga
-        Route::get('/dashboard', [DashboardController::class, 'summary']);
-        
-        // 2. Data / List Warga di lingkungan RT
-        Route::get('/data-warga', [WargaListController::class, 'index']);
-        
-        // 3. Detail Warga spesifik
-        Route::get('/data-warga/{id}', [WargaListController::class, 'show']);
-        
-        // 4. Transparansi Laporan Keuangan
-        Route::get('/laporan-keuangan', [KeuanganController::class, 'index']);
-        
+        Route::get('/dashboard', [WargaDashboard::class, 'summary']);
+        Route::get('/data-warga', [WargaList::class, 'index']);
+        Route::get('/data-warga/{id}', [WargaList::class, 'show']);
+        Route::get('/laporan-keuangan', [WargaKeuangan::class, 'index']);
     });
 
     /**
-     * ==========================================
-     * ENDPOINTS KHUSUS ADMIN RT / SUPERADMIN RW 
-     * (CRUD Manajemen Data)
-     * ==========================================
+     * ENDPOINTS KHUSUS ADMIN RT (CRUD Manajemen Data Terbatas pada RT)
      */
-    Route::middleware('role:admin,superadmin')->group(function () {
+    Route::prefix('rt')->middleware('role:admin')->group(function () {
         
-        // Warga
-        Route::get('/warga', [WargaController::class, 'index']);
-        Route::get('/warga/{id}', [WargaController::class, 'show']);
-        Route::post('/warga', [WargaController::class, 'store']);
-        Route::put('/warga/{id}', [WargaController::class, 'update']);
-        Route::delete('/warga/{id}', [WargaController::class, 'destroy']);
+        // 1. Dashboard Admin RT
+        Route::get('/dashboard', [RtDashboard::class, 'summary']);
 
-        // Kartu Keluarga
-        Route::get('/kk', [KartuKeluargaController::class, 'index']);
-        Route::get('/kk/{id}', [KartuKeluargaController::class, 'show']);
-        Route::post('/kk', [KartuKeluargaController::class, 'store']);
-        Route::put('/kk/{id}', [KartuKeluargaController::class, 'update']);
-        Route::delete('/kk/{id}', [KartuKeluargaController::class, 'destroy']);
-        Route::post('/kk/{id}/anggota', [KartuKeluargaController::class, 'tambahAnggota']);
-        Route::delete('/kk/{kkId}/anggota/{wargaId}', [KartuKeluargaController::class, 'hapusAnggota']);
+        // 2. Warga RT CRUD
+        Route::get('/warga', [RtWarga::class, 'index']);
+        Route::post('/warga', [RtWarga::class, 'store']);
+        Route::get('/warga/{id}', [RtWarga::class, 'show']);
+        Route::put('/warga/{id}', [RtWarga::class, 'update']);
+        Route::delete('/warga/{id}', [RtWarga::class, 'destroy']);
 
-        // Transaksi / Keuangan
-        Route::get('/transaksi', [TransaksiController::class, 'index']);
-        Route::post('/transaksi', [TransaksiController::class, 'store']);
-        Route::put('/transaksi/{id}', [TransaksiController::class, 'update']);
-        Route::delete('/transaksi/{id}', [TransaksiController::class, 'destroy']);
+        // 3. Kartu Keluarga RT CRUD
+        Route::get('/kartu-keluarga', [RtKK::class, 'index']);
+        Route::post('/kartu-keluarga', [RtKK::class, 'store']);
+        Route::get('/kartu-keluarga/{id}', [RtKK::class, 'show']);
+        Route::put('/kartu-keluarga/{id}', [RtKK::class, 'update']);
+        Route::delete('/kartu-keluarga/{id}', [RtKK::class, 'destroy']);
+        Route::post('/kartu-keluarga/{id}/anggota', [RtKK::class, 'tambahAnggota']);
+        Route::delete('/kartu-keluarga/{kkId}/anggota/{wargaId}', [RtKK::class, 'hapusAnggota']);
 
+        // 4. Keuangan RT CRUD
+        Route::get('/keuangan', [RtKeuangan::class, 'index']);
+        Route::post('/keuangan', [RtKeuangan::class, 'store']);
+        Route::put('/keuangan/{id}', [RtKeuangan::class, 'update']);
+        Route::delete('/keuangan/{id}', [RtKeuangan::class, 'destroy']);
     });
 });
