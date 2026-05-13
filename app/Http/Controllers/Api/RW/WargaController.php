@@ -1,0 +1,135 @@
+<?php
+
+namespace App\Http\Controllers\Api\Rw;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Warga;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+
+class WargaController extends Controller
+{
+    // Ambil semua warga
+    public function index(Request $request)
+    {
+        $warga = Warga::orderBy('nama', 'asc')->paginate(10);
+
+        return $this->sendPaginatedResponse(
+            $warga,
+            'Data warga berhasil diambil.'
+        );
+    }
+
+    // Detail warga
+    public function show($id)
+    {
+        try {
+
+            $warga = Warga::find($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $warga
+            ]);
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'message' => $e->getMessage(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+    }
+
+    // Tambah warga
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'nik' => 'required|string|size:16|unique:warga,nik',
+            'nama' => 'required|string|max:255',
+            'jenis_kelamin' => 'required|in:L,P',
+            'tempat_lahir' => 'required|string',
+            'tanggal_lahir' => 'required|date',
+            'alamat' => 'required|string',
+            'rt' => 'required|string',
+            'rw' => 'required|string',
+            'status_warga' => 'required|in:tetap,kontrak,pendatang',
+            'status_pernikahan' => 'required',
+            'password' => 'required|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError(
+                'Validasi gagal.',
+                $validator->errors(),
+                422
+            );
+        }
+
+        $warga = Warga::create(
+            $request->except('password')
+        );
+
+        User::create([
+            'name' => $request->nama,
+            'username' => $request->nik,
+            'email' => $request->nik . '@sitegar.com',
+            'nik' => $request->nik,
+            'password' => Hash::make($request->password),
+            'role' => 'warga',
+            'rt' => $request->rt,
+            'warga_id' => $warga->id,
+        ]);
+
+        return $this->sendResponse(
+            $warga,
+            'Warga berhasil ditambahkan.',
+            201
+        );
+    }
+
+    // Update warga
+    public function update(Request $request, $id)
+    {
+        $warga = Warga::find($id);
+
+        if (!$warga) {
+            return $this->sendError(
+                'Warga tidak ditemukan.',
+                [],
+                404
+            );
+        }
+
+        $warga->update($request->all());
+
+        return $this->sendResponse(
+            $warga,
+            'Data warga berhasil diupdate.'
+        );
+    }
+
+    // Hapus warga
+    public function destroy($id)
+    {
+        $warga = Warga::find($id);
+
+        if (!$warga) {
+            return $this->sendError(
+                'Warga tidak ditemukan.',
+                [],
+                404
+            );
+        }
+
+        User::where('warga_id', $id)->delete();
+
+        $warga->delete();
+
+        return $this->sendResponse(
+            [],
+            'Warga berhasil dihapus.'
+        );
+    }
+}
