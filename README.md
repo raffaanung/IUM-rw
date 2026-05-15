@@ -2,7 +2,7 @@
 
 Proyek ini adalah sistem manajemen data warga dan keuangan tingkat Rukun Tetangga (RT) dan Rukun Warga (RW) yang terintegrasi.
 
-## 🚀 Perjalanan Pengembangan (Log)
+##  Perjalanan Pengembangan (Log)
 
 Berikut adalah ringkasan apa yang telah dikerjakan dari awal hingga saat ini:
 
@@ -56,10 +56,10 @@ Berikut adalah ringkasan apa yang telah dikerjakan dari awal hingga saat ini:
 3. Jalankan `npm run dev`.
 4. Buka `http://localhost:3000` di browser.
 
-## 🔐 Akun Default
+##  Akun Default
 - **Super Admin (RW)**: `superadmin` / `password123`
 - **Admin RT 01**: `admin01` / `password123`
 - **Warga**: `warga@sitegar.com` / `password123`
 
 ---
-*Dikembangkan dengan ❤️ untuk kemudahan pengelolaan warga.*
+*Dikembangkan dengan  untuk kemudahan pengelolaan warga.*
