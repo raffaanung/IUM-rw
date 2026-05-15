@@ -18,19 +18,32 @@ class KeuanganController extends Controller
     {
         $user = $request->user();
         $profilWarga = null;
+
+        // Cari profil warga untuk mendapatkan RT/RW
         if (Schema::hasColumn('users', 'warga_id') && $user->warga_id) {
             $profilWarga = Warga::where('id', $user->warga_id)->first();
         }
+        
         if (!$profilWarga && $user->nik) {
             $profilWarga = Warga::where('nik', $user->nik)->first();
         }
 
         if (!$profilWarga) {
-            return $this->sendError('Profil warga tidak ditemukan.', [], 400);
+            return $this->sendError('Profil warga tidak ditemukan atau data belum lengkap.', [], 400);
         }
 
-        $rt = $profilWarga->rt;
-        $rw = $profilWarga->rw;
+        $rt = trim($profilWarga->rt);
+        $rw = trim($profilWarga->rw);
+
+        // Normalisasi RT/RW (hapus non-digit dan pastikan 2 digit)
+        $normalize = function($val) {
+            $digits = preg_replace('/\D+/', '', $val);
+            if (!$digits) return $val;
+            return str_pad($digits, 2, '0', STR_PAD_LEFT);
+        };
+
+        $rt = $normalize($rt);
+        $rw = $normalize($rw);
 
         // Query Dasar Keuangan untuk RT tersebut
         $query = Transaksi::with('user:id,name')->where('rt', $rt);
@@ -45,11 +58,12 @@ class KeuanganController extends Controller
             });
         }
 
-        // Filter: Berdasarkan Kategori (Iuran, Sosial, Operasional, dll)
+        // Filter: Berdasarkan Kategori
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
         }
 
+        // Filter: Berdasarkan Jenis
         if ($request->filled('jenis')) {
             $jenis = $request->jenis;
             if ($jenis === 'masuk') $jenis = 'pemasukan';
@@ -57,41 +71,50 @@ class KeuanganController extends Controller
             $query->where('jenis', $jenis);
         }
 
-        $transaksiList = $query->orderBy('tanggal_transaksi', 'desc')
-                               ->orderBy('id', 'desc')
+        $perPage = $request->input('limit', 10);
         $transaksiList = $query->orderBy('tanggal', 'desc')
-            ->orderBy('id', 'desc')
-            ->paginate($perPage);
-        // Mengambil kas total RT sepanjang masa atau berdasarkan filter tahun jika diperlukan
-        $totalPemasukan = Transaksi::where('rt', $rt)->where('rw', $rw)->where('jenis_transaksi', 'masuk')->sum('nominal');
-        $totalPengeluaran = Transaksi::where('rt', $rt)->where('rw', $rw)->where('jenis_transaksi', 'keluar')->sum('nominal');
-        $totalPemasukan = Transaksi::where('rt', $rt)->whereIn('jenis', ['pemasukan', 'masuk'])->sum('jumlah');
-        $totalPengeluaran = Transaksi::where('rt', $rt)->whereIn('jenis', ['pengeluaran', 'keluar'])->sum('jumlah');
-        // Format Ulang Collection (Menyertakan nama pencatat dari relasi User Admin)
-        $transaksiList->getCollection()->transform(function ($item) {
-        $transaksiList->getCollection()->transform(function ($item) {
-                'tanggal_transaksi' => $item->tanggal_transaksi,
+                               ->orderBy('id', 'desc')
+                               ->paginate($perPage);
+
+        // Perhitungan Statistik
+        $totalPemasukan = Transaksi::where('rt', $rt)
+            ->whereIn('jenis', ['pemasukan', 'masuk'])
+            ->sum('jumlah');
+            
+        $totalPengeluaran = Transaksi::where('rt', $rt)
+            ->whereIn('jenis', ['pengeluaran', 'keluar'])
+            ->sum('jumlah');
+            
+        $totalKas = $totalPemasukan - $totalPengeluaran;
+
+        // Format data untuk frontend
+        $formattedData = collect($transaksiList->items())->map(function ($item) {
+            return [
                 'id' => $item->id,
-                'tanggal' => $item->tanggal,
+                'tanggal' => $item->tanggal ? $item->tanggal->format('Y-m-d') : null,
                 'keterangan' => $item->judul,
                 'kategori' => $item->kategori,
                 'jenis' => $item->jenis === 'pengeluaran' ? 'keluar' : ($item->jenis === 'pemasukan' ? 'masuk' : $item->jenis),
                 'jumlah' => $item->jumlah,
                 'rt' => $item->rt,
                 'pencatat' => $item->user ? $item->user->name : ($item->pencatat ?? 'Sistem'),
+            ];
+        });
 
-        // Buat custom response yg menggabungkan statistik keuangan + pagination
         return response()->json([
             'success' => true,
             'message' => 'Laporan keuangan RT berhasil diambil.',
             'statistik' => [
-                'total_kas'         => $totalKas,
-                'total_pemasukan'   => $totalPemasukan,
-                'total_pengeluaran' => $totalPengeluaran,
-            ],
-            'data' => $transaksiList->items(),
+                'total_kas'         => (float) $totalKas,
+                'total_pemasukan'   => (float) $totalPemasukan,
+                'total_pengeluaran' => (float) $totalPengeluaran,
                 'rt'                => $rt,
-                'rw'                => '08',
+            ],
+            'data' => $formattedData,
+            'meta' => [
+                'rt' => $rt,
+                'rw' => $rw,
+            ],
             'pagination' => [
                 'current_page' => $transaksiList->currentPage(),
                 'per_page'     => $transaksiList->perPage(),
@@ -100,7 +123,5 @@ class KeuanganController extends Controller
                 'has_more'     => $transaksiList->hasMorePages(),
             ]
         ], 200);
-    }
-}
     }
 }

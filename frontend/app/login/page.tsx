@@ -15,7 +15,9 @@ export default function LoginPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/public-stats")
+        const res = await fetch("http://localhost:8001/api/public-stats", {
+          mode: "cors"
+        })
         const json = await res.json()
         if (json.success) {
           setStats({

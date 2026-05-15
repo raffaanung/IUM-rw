@@ -172,7 +172,7 @@ class AuthController extends Controller
             'rt'                => 'required|string',
             'rw'                => 'required|string',
             'status_warga'      => 'required|in:tetap,kontrak,pendatang',
-            'status_pernikahan' => 'required|in:belum_menikah,menikah,cerai',
+            'status_pernikahan' => 'required',
             'pekerjaan'         => 'nullable|string',
             'no_hp'             => 'nullable|string',
         ]);

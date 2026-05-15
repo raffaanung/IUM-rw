@@ -22,6 +22,7 @@ class Warga extends Model
         'pekerjaan',
         'pendidikan',
         'pendapatan',
+        'agama',
         'no_hp',
         'foto',
     ];

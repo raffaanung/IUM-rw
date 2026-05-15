@@ -16,7 +16,12 @@ class KeuanganController extends Controller
         $query = Transaksi::with('user:id,name');
 
         if ($request->filled('rt')) {
-            $query->where('rt', $request->rt);
+            $rt = $request->rt;
+            $digits = preg_replace('/\D+/', '', $rt);
+            if ($digits) {
+                $rt = str_pad($digits, 2, '0', STR_PAD_LEFT);
+            }
+            $query->where('rt', $rt);
         }
 
         if ($request->filled('jenis')) {

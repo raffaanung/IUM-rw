@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useRouter } from "next/navigation"
 import type { User } from "./types"
 
-const API_URL = "http://127.0.0.1:8000/api"
+const API_URL = "http://localhost:8001/api"
 const STORAGE_KEY = "siwarga_session"
 const TOKEN_KEY = "siwarga_token"
 const FIXED_RW = "08"

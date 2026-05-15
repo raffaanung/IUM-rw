@@ -13,7 +13,14 @@ class KeuanganController extends Controller
     public function index(Request $request)
     {
         $admin = $request->user();
-        $query = Transaksi::with('user:id,name')->where('rt', $admin->rt);
+        
+        $rt = $admin->rt;
+        $digits = preg_replace('/\D+/', '', $rt);
+        if ($digits) {
+            $rt = str_pad($digits, 2, '0', STR_PAD_LEFT);
+        }
+
+        $query = Transaksi::with('user:id,name')->where('rt', $rt);
 
         if ($request->filled('search')) {
             $query->where('judul', 'LIKE', "%{$request->search}%");

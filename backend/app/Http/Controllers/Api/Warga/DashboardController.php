@@ -32,6 +32,16 @@ class DashboardController extends Controller
         $rt = $profilWarga->rt;
         $rw = $profilWarga->rw;
 
+        // Normalisasi RT/RW
+        $normalize = function($val) {
+            $digits = preg_replace('/\D+/', '', $val);
+            if (!$digits) return $val;
+            return str_pad($digits, 2, '0', STR_PAD_LEFT);
+        };
+
+        $rt = $normalize($rt);
+        $rw = $normalize($rw);
+
         // Menghitung statistik keuangan RT yang sama dengan Warga
         $totalPemasukan = Transaksi::where('rt', $rt)
             ->whereIn('jenis', ['pemasukan', 'masuk'])
@@ -67,14 +77,14 @@ class DashboardController extends Controller
             'user' => [
                 'nama' => $profilWarga->nama,
                 'rt'   => $rt,
-                'rw'   => '08',
+                'rw'   => $rw,
             ],
             'profil_warga' => [
                 'id' => $profilWarga->id,
                 'nik' => $profilWarga->nik,
                 'nama' => $profilWarga->nama,
-                'rt' => $profilWarga->rt,
-                'rw' => $profilWarga->rw,
+                'rt' => $rt,
+                'rw' => $rw,
                 'status_warga' => $profilWarga->status_warga,
             ],
             'keuangan' => [
