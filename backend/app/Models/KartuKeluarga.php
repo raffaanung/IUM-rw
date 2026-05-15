@@ -16,6 +16,11 @@ class KartuKeluarga extends Model
         'rw',
     ];
 
+    public function kepalaKeluarga()
+    {
+        return $this->belongsTo(Warga::class, 'kepala_keluarga');
+    }
+
     public function anggotaKk()
     {
         return $this->hasMany(AnggotaKk::class);

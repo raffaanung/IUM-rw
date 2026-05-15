@@ -57,7 +57,15 @@ export function DashboardShell({ children, allowedRoles }: DashboardShellProps) 
           <Separator orientation="vertical" className="h-5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
-              Selamat datang, <span className="text-primary">{user.nama}</span>
+              {user.role === "super-admin" ? (
+                <>
+                  Selamat datang,RW {String(user.rw).padStart(2, "0")}
+                </>
+              ) : (
+                <>
+                  Selamat datang, <span className="text-primary">{user.nama}</span>
+                </>
+              )}
             </p>
           </div>
         </header>

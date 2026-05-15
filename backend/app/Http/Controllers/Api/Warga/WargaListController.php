@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Warga;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Warga;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 
 class WargaListController extends Controller
 {
@@ -17,7 +19,13 @@ class WargaListController extends Controller
         $user = $request->user();
         
         // Ambil data profil warga milik user yang sedang login
-        $profilWarga = Warga::where('id', $user->warga_id)->first();
+        $profilWarga = null;
+        if (Schema::hasColumn('users', 'warga_id') && $user->warga_id) {
+            $profilWarga = Warga::where('id', $user->warga_id)->first();
+        }
+        if (!$profilWarga && $user->nik) {
+            $profilWarga = Warga::where('nik', $user->nik)->first();
+        }
 
         if (!$profilWarga) {
             return $this->sendError('Profil warga tidak ditemukan atau data belum lengkap.', [], 400);
@@ -58,13 +66,29 @@ class WargaListController extends Controller
                 $maskedNik = substr($maskedNik, 0, 4) . '***' . substr($maskedNik, -2);
             }
 
+            $isSelf = false;
+            if (Schema::hasColumn('users', 'warga_id') && request()->user() && request()->user()->warga_id) {
+                $isSelf = (int) $item->id === (int) request()->user()->warga_id;
+            } elseif (request()->user() && request()->user()->nik) {
+                $isSelf = $item->nik === request()->user()->nik;
+            }
+
             return [
                 'id'            => $item->id,
-                'nik'           => $maskedNik, // NIK yang sudah disensor
+                'nik'           => $isSelf ? $item->nik : $maskedNik,
                 'nama'          => $item->nama,
                 'jenis_kelamin' => $item->jenis_kelamin,
                 'alamat'        => $item->alamat,
+                'rt'            => $item->rt,
+                'rw'            => $item->rw,
                 'status_warga'  => $item->status_warga,
+                'status_pernikahan' => $isSelf ? $item->status_pernikahan : null,
+                'tempat_lahir'  => $isSelf ? $item->tempat_lahir : null,
+                'tanggal_lahir' => $isSelf ? $item->tanggal_lahir : null,
+                'pekerjaan'     => $isSelf ? $item->pekerjaan : null,
+                'pendidikan'    => $isSelf ? $item->pendidikan : null,
+                'pendapatan'    => $isSelf ? $item->pendapatan : null,
+                'no_hp'         => $isSelf ? $item->no_hp : null,
             ];
         });
 
@@ -77,7 +101,13 @@ class WargaListController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        $profilWarga = Warga::where('id', $user->warga_id)->first();
+        $profilWarga = null;
+        if (Schema::hasColumn('users', 'warga_id') && $user->warga_id) {
+            $profilWarga = Warga::where('id', $user->warga_id)->first();
+        }
+        if (!$profilWarga && $user->nik) {
+            $profilWarga = Warga::where('nik', $user->nik)->first();
+        }
 
         if (!$profilWarga) {
             return $this->sendError('Profil warga tidak ditemukan.', [], 400);
@@ -99,5 +129,49 @@ class WargaListController extends Controller
         // Di sini kita tampilkan utuh karena ini adalah halaman detail (sudah spesifik).
         
         return $this->sendResponse($detail, 'Detail profil warga berhasil diambil.');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $user = $request->user();
+        $profilWarga = null;
+        if (Schema::hasColumn('users', 'warga_id') && $user->warga_id) {
+            $profilWarga = Warga::where('id', $user->warga_id)->first();
+        }
+        if (!$profilWarga && $user->nik) {
+            $profilWarga = Warga::where('nik', $user->nik)->first();
+        }
+
+        if (!$profilWarga) {
+            return $this->sendError('Profil warga tidak ditemukan.', [], 400);
+        }
+
+        if ((int) $profilWarga->id !== (int) $id) {
+            return $this->sendError('Anda hanya dapat mengedit profil Anda sendiri.', [], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'alamat' => 'sometimes|required|string',
+            'pekerjaan' => 'nullable|string',
+            'pendidikan' => 'nullable|string',
+            'pendapatan' => 'nullable|numeric|min:0',
+            'no_hp' => 'nullable|string',
+            'foto' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validasi Error.', $validator->errors(), 422);
+        }
+
+        $profilWarga->update($request->only([
+            'alamat',
+            'pekerjaan',
+            'pendidikan',
+            'pendapatan',
+            'no_hp',
+            'foto',
+        ]));
+
+        return $this->sendResponse($profilWarga, 'Profil berhasil diperbarui.');
     }
 }

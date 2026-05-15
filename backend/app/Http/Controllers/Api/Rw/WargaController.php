@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Warga;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class WargaController extends Controller
@@ -56,7 +57,6 @@ class WargaController extends Controller
             'rw' => 'required|string',
             'status_warga' => 'required|in:tetap,kontrak,pendatang',
             'status_pernikahan' => 'required',
-            'password' => 'required|min:6',
         ]);
 
         if ($validator->fails()) {
@@ -71,16 +71,28 @@ class WargaController extends Controller
             $request->except('password')
         );
 
-        User::create([
+        $baseUsername = trim($request->nama);
+        $username = $baseUsername;
+        $suffix = 1;
+        while (User::where('username', $username)->exists()) {
+            $suffix++;
+            $username = $baseUsername . ' ' . $request->rt . ' ' . $suffix;
+        }
+
+        $userData = [
             'name' => $request->nama,
-            'username' => $request->nik,
+            'username' => $username,
             'email' => $request->nik . '@sitegar.com',
             'nik' => $request->nik,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($request->rt),
             'role' => 'warga',
             'rt' => $request->rt,
-            'warga_id' => $warga->id,
-        ]);
+        ];
+        if (Schema::hasColumn('users', 'warga_id')) {
+            $userData['warga_id'] = $warga->id;
+        }
+
+        User::create($userData);
 
         return $this->sendResponse(
             $warga,
@@ -123,7 +135,11 @@ class WargaController extends Controller
             );
         }
 
-        User::where('warga_id', $id)->delete();
+        if (Schema::hasColumn('users', 'warga_id')) {
+            User::where('warga_id', $id)->delete();
+        } else {
+            User::where('nik', $warga->nik)->delete();
+        }
 
         $warga->delete();
 

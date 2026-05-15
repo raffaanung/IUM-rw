@@ -18,6 +18,8 @@ export default function SuperAdminDashboardPage() {
     totalWarga: 0,
     totalKK: 0,
     saldoRW: 0,
+    masukRW: 0,
+    keluarRW: 0,
     wargaTetap: 0,
     lakiLaki: 0,
     perempuan: 0,
@@ -37,6 +39,8 @@ export default function SuperAdminDashboardPage() {
             totalWarga: json.data.total_warga,
             totalKK: json.data.total_kk,
             saldoRW: json.data.total_saldo,
+            masukRW: json.data.total_masuk,
+            keluarRW: json.data.total_keluar,
             wargaTetap: json.data.warga_tetap,
             lakiLaki: json.data.laki_laki,
             perempuan: json.data.perempuan,
@@ -67,8 +71,9 @@ export default function SuperAdminDashboardPage() {
           variant="primary"
         />
         <StatCard
-          title="Saldo Kas RW"
+          title="Total Kas RW"
           value={formatRupiah(data.saldoRW)}
+          description={`${formatRupiah(data.masukRW)} total masuk`}
           icon={Wallet}
           variant="success"
         />

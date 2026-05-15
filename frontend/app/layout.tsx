@@ -18,8 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "SIWARGA — Sistem Informasi Demografis RW",
-  description: "Sistem manajemen data demografis dan keuangan Rukun Warga (RW) terintegrasi.",
+  title: "SITEGAR — Sistem Informasi Data Terpadu Warga",
+  description: "Sistem informasi data terpadu warga untuk manajemen demografi, Kartu Keluarga, dan keuangan RW.",
   generator: "v0.app",
 }
 

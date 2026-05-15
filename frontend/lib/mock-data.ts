@@ -1,7 +1,7 @@
 import type { Warga, KartuKeluarga, Transaksi, User } from "./types"
 
-export const RW_NUMBER = "05"
-export const RT_LIST = ["01", "02", "03", "04", "05"]
+export const RW_NUMBER = "8"
+export const RT_LIST = ["01", "02", "03", "04", "05", "06", "07", "08"]
 
 export const MOCK_USERS: User[] = [
   {
@@ -56,7 +56,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Melati No. 12",
     rt: "01",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     noTelepon: "081234567890",
     email: "andi.pratama@example.com",
@@ -78,7 +78,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Melati No. 12",
     rt: "01",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     noTelepon: "081234567891",
   },
@@ -99,7 +99,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Melati No. 12",
     rt: "01",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
   },
   {
@@ -119,7 +119,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Mawar No. 8",
     rt: "01",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     noTelepon: "081234567892",
     email: "budi.santoso@example.com",
@@ -141,7 +141,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Mawar No. 8",
     rt: "01",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
   },
   {
@@ -161,7 +161,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Anggrek No. 5",
     rt: "02",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Domisili",
     noTelepon: "081234567893",
     email: "dewi.lestari@example.com",
@@ -183,7 +183,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Kenanga No. 21",
     rt: "02",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     noTelepon: "081234567894",
   },
@@ -204,7 +204,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Kenanga No. 21",
     rt: "02",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
   },
   {
@@ -224,7 +224,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Dahlia No. 14",
     rt: "03",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Kontrak",
     noTelepon: "081234567895",
   },
@@ -245,7 +245,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Cempaka No. 7",
     rt: "03",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     email: "hadi.susanto@example.com",
   },
@@ -266,7 +266,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Cempaka No. 7",
     rt: "03",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
   },
   {
@@ -286,7 +286,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Flamboyan No. 3",
     rt: "04",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     noTelepon: "081234567896",
   },
@@ -307,7 +307,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Flamboyan No. 3",
     rt: "04",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
   },
   {
@@ -327,7 +327,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Tulip No. 19",
     rt: "04",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     noTelepon: "081234567897",
     email: "bambang.wijaya@example.com",
@@ -349,7 +349,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Sakura No. 11",
     rt: "05",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Domisili",
     noTelepon: "081234567898",
   },
@@ -370,7 +370,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Mangga No. 6",
     rt: "05",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
     noTelepon: "081234567899",
   },
@@ -391,7 +391,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Mangga No. 6",
     rt: "05",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
   },
   {
@@ -411,7 +411,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Mangga No. 6",
     rt: "05",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Tetap",
   },
   {
@@ -431,7 +431,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Pinang No. 9",
     rt: "02",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Kontrak",
   },
   {
@@ -451,7 +451,7 @@ export const MOCK_WARGA: Warga[] = [
     kewarganegaraan: "WNI",
     alamat: "Jl. Jambu No. 4",
     rt: "04",
-    rw: "05",
+    rw: "08",
     statusKependudukan: "Domisili",
     noTelepon: "081234567800",
   },

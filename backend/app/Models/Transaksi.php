@@ -16,6 +16,7 @@ class Transaksi extends Model
         'kategori',
         'rt',
         'tanggal',
+        'pencatat',
         'created_by',
     ];
 

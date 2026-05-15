@@ -22,11 +22,12 @@ export default function AdminKKPage() {
       if (data.success) {
         // Map backend to FE types
         const mapped = data.data.map((item: any) => ({
+          id: String(item.id),
           noKK: item.no_kk,
           kepalaKeluarga: item.kepala_keluarga?.nama || "Tidak Ada",
           alamat: item.alamat,
           rt: item.kepala_keluarga?.rt || user?.rt || "",
-          rw: "05",
+          rw: "8",
           jumlahAnggota: item.anggota_kk_count || 0,
           tanggalDibuat: item.created_at,
           anggota: []
@@ -66,7 +67,7 @@ export default function AdminKKPage() {
         />
       </div>
 
-      <KKTable data={kkList} detailHrefBase="/admin/kk" showRT={false} rt={rt} />
+      <KKTable data={kkList} detailHrefBase="/admin/kk" showRT={false} rt={rt} onAdd={fetchData} />
     </>
   )
 }

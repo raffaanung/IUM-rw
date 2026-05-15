@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api\Rt;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Warga;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class WargaController extends Controller
@@ -44,11 +47,15 @@ class WargaController extends Controller
         $admin = $request->user();
 
         $validator = Validator::make($request->all(), [
-            'nik' => 'required|string|unique:warga,nik',
+            'nik' => 'required|string|size:16|unique:warga,nik',
             'nama' => 'required|string|max:255',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'status_warga' => 'required|string',
-            // ... tambahkan validasi lain sesuai kebutuhan
+            'jenis_kelamin' => 'required|in:L,P',
+            'status_warga' => 'required|in:tetap,kontrak,pendatang',
+            'tempat_lahir' => 'required|string',
+            'tanggal_lahir' => 'required|date',
+            'alamat' => 'required|string',
+            'rw' => 'required|string',
+            'status_pernikahan' => 'required|in:belum_menikah,menikah,cerai',
         ]);
 
         if ($validator->fails()) {
@@ -60,6 +67,29 @@ class WargaController extends Controller
         $data['rt'] = $admin->rt; 
         
         $warga = Warga::create($data);
+
+        $baseUsername = trim($warga->nama);
+        $username = $baseUsername;
+        $suffix = 1;
+        while (User::where('username', $username)->exists()) {
+            $suffix++;
+            $username = $baseUsername . ' ' . $admin->rt . ' ' . $suffix;
+        }
+
+        $userData = [
+            'name' => $warga->nama,
+            'username' => $username,
+            'email' => $warga->nik . '@sitegar.com',
+            'nik' => $warga->nik,
+            'password' => Hash::make($admin->rt),
+            'role' => 'warga',
+            'rt' => $admin->rt,
+        ];
+        if (Schema::hasColumn('users', 'warga_id')) {
+            $userData['warga_id'] = $warga->id;
+        }
+
+        User::create($userData);
 
         return $this->sendResponse($warga, 'Warga berhasil ditambahkan.', 201);
     }
@@ -92,9 +122,11 @@ class WargaController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'nik' => 'required|string|unique:warga,nik,'.$id,
+            'nik' => 'required|string|size:16|unique:warga,nik,'.$id,
             'nama' => 'required|string|max:255',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
+            'jenis_kelamin' => 'required|in:L,P',
+            'status_warga' => 'required|in:tetap,kontrak,pendatang',
+            'status_pernikahan' => 'required|in:belum_menikah,menikah,cerai',
         ]);
 
         if ($validator->fails()) {
@@ -120,6 +152,12 @@ class WargaController extends Controller
 
         if (!$warga) {
             return $this->sendError('Warga tidak ditemukan di RT Anda.', [], 404);
+        }
+
+        if (Schema::hasColumn('users', 'warga_id')) {
+            User::where('warga_id', $id)->delete();
+        } else {
+            User::where('nik', $warga->nik)->delete();
         }
 
         $warga->delete();

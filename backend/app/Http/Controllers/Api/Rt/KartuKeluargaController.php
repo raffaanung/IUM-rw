@@ -19,9 +19,8 @@ class KartuKeluargaController extends Controller
         $admin = $request->user();
         
         $query = KartuKeluarga::with(['kepalaKeluarga:id,nama,rt,nik'])
-            ->whereHas('kepalaKeluarga', function($q) use ($admin) {
-                $q->where('rt', $admin->rt);
-            })->withCount('anggotaKk');
+            ->where('rt', $admin->rt)
+            ->withCount('anggotaKk');
 
         $perPage = $request->input('limit', 10);
         $kkList = $query->paginate($perPage);
@@ -51,7 +50,19 @@ class KartuKeluargaController extends Controller
             return $this->sendError('Warga (Kepala Keluarga) tidak ditemukan di RT Anda.', [], 400);
         }
 
-        $kk = KartuKeluarga::create($request->all());
+        $data = $request->all();
+        $data['kepala_keluarga'] = $request->warga_id;
+        $data['rw'] = '8'; // Default RW
+        $data['rt'] = $admin->rt;
+
+        $kk = KartuKeluarga::create($data);
+
+        // Otomatis tambahkan Kepala Keluarga sebagai anggota pertama
+        AnggotaKk::create([
+            'kartu_keluarga_id' => $kk->id,
+            'warga_id' => $request->warga_id,
+            'hubungan_keluarga' => 'Kepala Keluarga',
+        ]);
 
         return $this->sendResponse($kk, 'Kartu Keluarga berhasil dibuat.', 201);
     }
@@ -64,9 +75,7 @@ class KartuKeluargaController extends Controller
         $admin = $request->user();
 
         $kk = KartuKeluarga::with(['kepalaKeluarga', 'anggotaKk.warga'])
-            ->whereHas('kepalaKeluarga', function($q) use ($admin) {
-                $q->where('rt', $admin->rt);
-            })
+            ->where('rt', $admin->rt)
             ->where('id', $id)
             ->first();
 
@@ -84,9 +93,7 @@ class KartuKeluargaController extends Controller
     {
         $admin = $request->user();
 
-        $kk = KartuKeluarga::whereHas('kepalaKeluarga', function($q) use ($admin) {
-                $q->where('rt', $admin->rt);
-            })->where('id', $id)->first();
+        $kk = KartuKeluarga::where('rt', $admin->rt)->where('id', $id)->first();
 
         if (!$kk) {
             return $this->sendError('Kartu Keluarga tidak ditemukan di RT Anda.', [], 404);
@@ -113,9 +120,7 @@ class KartuKeluargaController extends Controller
     {
         $admin = $request->user();
 
-        $kk = KartuKeluarga::whereHas('kepalaKeluarga', function($q) use ($admin) {
-                $q->where('rt', $admin->rt);
-            })->where('id', $id)->first();
+        $kk = KartuKeluarga::where('rt', $admin->rt)->where('id', $id)->first();
 
         if (!$kk) {
             return $this->sendError('Kartu Keluarga tidak ditemukan di RT Anda.', [], 404);
@@ -139,9 +144,7 @@ class KartuKeluargaController extends Controller
         $admin = $request->user();
 
         // 1. Pastikan KK tersebut milik RT ini
-        $kk = KartuKeluarga::whereHas('kepalaKeluarga', function($q) use ($admin) {
-            $q->where('rt', $admin->rt);
-        })->where('id', $kkId)->first();
+        $kk = KartuKeluarga::where('rt', $admin->rt)->where('id', $kkId)->first();
 
         if (!$kk) {
             return $this->sendError('Kartu Keluarga tidak valid.', [], 404);
@@ -149,7 +152,7 @@ class KartuKeluargaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'warga_id' => 'required|exists:warga,id',
-            'status_hubungan_dalam_keluarga' => 'required|string'
+            'hubungan_keluarga' => 'required|string'
         ]);
 
         if ($validator->fails()) {
@@ -171,7 +174,7 @@ class KartuKeluargaController extends Controller
         $anggota = AnggotaKk::create([
             'kartu_keluarga_id' => $kkId,
             'warga_id' => $warga->id,
-            'status_hubungan_dalam_keluarga' => $request->status_hubungan_dalam_keluarga
+            'hubungan_keluarga' => $request->hubungan_keluarga ?? $request->status_hubungan_dalam_keluarga
         ]);
 
         return $this->sendResponse($anggota, 'Anggota berhasil ditambahkan ke KK.', 201);
@@ -185,9 +188,7 @@ class KartuKeluargaController extends Controller
         $admin = $request->user();
 
         // Pastikan KK tersebut milik RT ini
-        $kk = KartuKeluarga::whereHas('kepalaKeluarga', function($q) use ($admin) {
-            $q->where('rt', $admin->rt);
-        })->where('id', $kkId)->first();
+        $kk = KartuKeluarga::where('rt', $admin->rt)->where('id', $kkId)->first();
 
         if (!$kk) {
             return $this->sendError('Kartu Keluarga tidak valid.', [], 404);
@@ -202,5 +203,43 @@ class KartuKeluargaController extends Controller
         $anggota->delete();
 
         return $this->sendResponse([], 'Anggota berhasil dihapus dari KK.');
+    }
+
+    public function updateAnggota(Request $request, $kkId, $wargaId)
+    {
+        $admin = $request->user();
+
+        $kk = KartuKeluarga::where('rt', $admin->rt)->where('id', $kkId)->first();
+        if (!$kk) {
+            return $this->sendError('Kartu Keluarga tidak valid.', [], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'hubungan_keluarga' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validasi Error.', $validator->errors(), 422);
+        }
+
+        $anggota = AnggotaKk::where('kartu_keluarga_id', $kkId)->where('warga_id', $wargaId)->first();
+        if (!$anggota) {
+            return $this->sendError('Anggota tidak ditemukan di KK ini.', [], 404);
+        }
+
+        $anggota->update([
+            'hubungan_keluarga' => $request->hubungan_keluarga
+        ]);
+
+        if ($request->hubungan_keluarga === 'Kepala Keluarga') {
+            AnggotaKk::where('kartu_keluarga_id', $kkId)
+                ->where('hubungan_keluarga', 'Kepala Keluarga')
+                ->where('warga_id', '!=', $wargaId)
+                ->update(['hubungan_keluarga' => 'Anggota']);
+
+            $kk->update(['kepala_keluarga' => $wargaId]);
+        }
+
+        return $this->sendResponse($anggota, 'Hubungan keluarga berhasil diupdate.');
     }
 }

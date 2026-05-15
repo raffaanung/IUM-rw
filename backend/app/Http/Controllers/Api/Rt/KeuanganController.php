@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Rt;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class KeuanganController extends Controller
@@ -49,7 +50,12 @@ class KeuanganController extends Controller
 
         $data = $request->all();
         $data['rt'] = $admin->rt;
-        $data['created_by'] = $admin->id;
+        if (Schema::hasColumn('transaksi', 'created_by')) {
+            $data['created_by'] = $admin->id;
+        }
+        if (Schema::hasColumn('transaksi', 'pencatat')) {
+            $data['pencatat'] = $admin->name;
+        }
 
         $transaksi = Transaksi::create($data);
 
@@ -82,6 +88,9 @@ class KeuanganController extends Controller
         $data = $request->only([
             'judul', 'tanggal', 'jenis', 'kategori', 'jumlah', 'keterangan'
         ]);
+        if (Schema::hasColumn('transaksi', 'pencatat')) {
+            $data['pencatat'] = $admin->name;
+        }
 
         $transaksi->update($data);
 

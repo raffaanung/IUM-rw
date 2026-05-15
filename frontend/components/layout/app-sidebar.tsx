@@ -58,6 +58,7 @@ export function AppSidebar() {
 
   if (!user) return null
   const items = NAV_BY_ROLE[user.role] ?? []
+  const rwLabel = String(user.rw).padStart(2, "0")
   const initials = user.nama
     .split(" ")
     .slice(0, 2)
@@ -73,8 +74,8 @@ export function AppSidebar() {
             <Building2 className="size-5" />
           </div>
           <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
-            <span className="font-semibold leading-tight truncate">SIWARGA</span>
-            <span className="text-xs text-muted-foreground truncate">RW {user.rw}</span>
+            <span className="font-semibold leading-tight truncate">SITEGAR</span>
+            <span className="text-xs text-muted-foreground truncate">RW {rwLabel}</span>
           </div>
         </div>
       </SidebarHeader>

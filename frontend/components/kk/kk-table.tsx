@@ -26,9 +26,10 @@ interface KKTableProps {
   showRT?: boolean
   canAdd?: boolean
   rt?: string
+  onAdd?: () => void
 }
 
-export function KKTable({ data, detailHrefBase, showRT = true, canAdd = true, rt }: KKTableProps) {
+export function KKTable({ data, detailHrefBase, showRT = true, canAdd = true, rt, onAdd }: KKTableProps) {
   const [search, setSearch] = useState("")
   const [rtFilter, setRtFilter] = useState("all")
 
@@ -73,7 +74,7 @@ export function KKTable({ data, detailHrefBase, showRT = true, canAdd = true, rt
               </SelectContent>
             </Select>
           ) : null}
-          {canAdd ? <KKFormDialog rt={rt} /> : null}
+          {canAdd ? <KKFormDialog rt={rt} onSuccess={onAdd} /> : null}
         </div>
       </div>
 
@@ -110,7 +111,7 @@ export function KKTable({ data, detailHrefBase, showRT = true, canAdd = true, rt
                   </TableCell>
                   <TableCell className="text-right">
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`${detailHrefBase}/${kk.noKK}`}>
+                      <Link href={`${detailHrefBase}/${kk.id}`}>
                         <Eye className="size-4" />
                         Detail
                       </Link>

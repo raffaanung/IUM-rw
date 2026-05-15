@@ -57,10 +57,10 @@ class DashboardController extends Controller
         // =========================
         // KEUANGAN
         // =========================
-        $totalPemasukan = Transaksi::where('jenis', 'masuk')
+        $totalPemasukan = Transaksi::where('jenis', 'pemasukan')
             ->sum('jumlah');
 
-        $totalPengeluaran = Transaksi::where('jenis', 'keluar')
+        $totalPengeluaran = Transaksi::where('jenis', 'pengeluaran')
             ->sum('jumlah');
 
         $saldoKas = $totalPemasukan - $totalPengeluaran;
@@ -92,27 +92,18 @@ class DashboardController extends Controller
         // FINAL RESPONSE
         // =========================
         $data = [
-
-            'demografi' => [
-                'total'        => $totalWarga,
-                'laki_laki'    => $lakiLaki,
-                'perempuan'    => $perempuan,
-                'tetap'        => $wargaTetap,
-                'domisili'     => $wargaDomisili,
-                'kontrak'      => $wargaKontrak,
-            ],
-
-            'sebaran_rt' => $sebaranRT,
-
-            'total_kk' => $totalKK,
-
-            'keuangan' => [
-                'saldo'   => $saldoKas,
-                'masuk'   => $totalPemasukan,
-                'keluar'  => $totalPengeluaran,
-            ],
-
+            'total_warga'      => $totalWarga,
+            'total_kk'         => $totalKK,
+            'total_saldo'      => $saldoKas,
+            'total_masuk'      => $totalPemasukan,
+            'total_keluar'     => $totalPengeluaran,
+            'warga_tetap'      => $wargaTetap,
+            'laki_laki'        => $lakiLaki,
+            'perempuan'        => $perempuan,
+            'warga_domisili'   => $wargaDomisili,
+            'warga_kontrak'    => $wargaKontrak,
             'transaksi_terbaru' => $transaksiTerbaru,
+            'sebaran_rt'       => $sebaranRT,
         ];
 
         return $this->sendResponse(

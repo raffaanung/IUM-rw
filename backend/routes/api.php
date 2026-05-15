@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Rw\AdminController as RwAdminController;
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::get('/public-stats', [AuthController::class, 'publicStats']);
 
 // Protected routes (harus login)
 Route::middleware('auth:sanctum')->group(function () {
@@ -37,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [WargaDashboard::class, 'summary']);
         Route::get('/data-warga', [WargaList::class, 'index']);
         Route::get('/data-warga/{id}', [WargaList::class, 'show']);
+        Route::put('/data-warga/{id}', [WargaList::class, 'update']);
         Route::get('/laporan-keuangan', [WargaKeuangan::class, 'index']);
     });
 
@@ -62,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/kartu-keluarga/{id}', [RtKK::class, 'update']);
         Route::delete('/kartu-keluarga/{id}', [RtKK::class, 'destroy']);
         Route::post('/kartu-keluarga/{id}/anggota', [RtKK::class, 'tambahAnggota']);
+        Route::put('/kartu-keluarga/{kkId}/anggota/{wargaId}', [RtKK::class, 'updateAnggota']);
         Route::delete('/kartu-keluarga/{kkId}/anggota/{wargaId}', [RtKK::class, 'hapusAnggota']);
 
         // 4. Keuangan RT CRUD
@@ -85,11 +88,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // kartu keluarga
         Route::get('/kartu-keluarga', [RwKKController::class, 'index']);
+        Route::post('/kartu-keluarga', [RwKKController::class, 'store']);
         Route::get('/kartu-keluarga/{id}', [RwKKController::class, 'show']);
+        Route::put('/kartu-keluarga/{id}', [RwKKController::class, 'update']);
+        Route::delete('/kartu-keluarga/{id}', [RwKKController::class, 'destroy']);
+        Route::post('/kartu-keluarga/{id}/anggota', [RwKKController::class, 'tambahAnggota']);
+        Route::put('/kartu-keluarga/{kkId}/anggota/{wargaId}', [RwKKController::class, 'updateAnggota']);
+        Route::delete('/kartu-keluarga/{kkId}/anggota/{wargaId}', [RwKKController::class, 'hapusAnggota']);
 
         // keuangan RW
         Route::get('/keuangan', [RwKeuanganController::class, 'index']);
+        Route::post('/keuangan', [RwKeuanganController::class, 'store']);
         Route::get('/keuangan/{id}', [RwKeuanganController::class, 'show']);
+        Route::put('/keuangan/{id}', [RwKeuanganController::class, 'update']);
+        Route::delete('/keuangan/{id}', [RwKeuanganController::class, 'destroy']);
 
         // admin RT
         Route::get('/admin', [RwAdminController::class, 'index']);

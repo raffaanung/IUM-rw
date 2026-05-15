@@ -7,19 +7,93 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, IdCard, MapPin, UserPlus, Users } from "lucide-react"
+import { ArrowLeft, IdCard, MapPin, UserPlus, Users, Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { AnggotaFormDialog } from "./anggota-form-dialog"
+import { fetchWithAuth, useAuth } from "@/lib/auth-context"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 interface KKDetailProps {
   kk: KartuKeluarga
   backHref: string
   wargaHrefBase: string
   canManage?: boolean
+  onChanged?: () => void
 }
 
-export function KKDetail({ kk, backHref, wargaHrefBase, canManage = true }: KKDetailProps) {
+const HUBUNGAN_OPTIONS = [
+  "Kepala Keluarga",
+  "Istri",
+  "Suami",
+  "Anak",
+  "Orang Tua",
+  "Mertua",
+  "Cucu",
+  "Famili Lain",
+  "Anggota",
+  "Lainnya",
+]
+
+export function KKDetail({ kk, backHref, wargaHrefBase, canManage = true, onChanged }: KKDetailProps) {
+  const { user } = useAuth()
+  const router = useRouter()
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const kepala = kk.anggota.find((a) => a.hubunganKeluarga === "Kepala Keluarga")
+
+  const refreshData = () => {
+    if (onChanged) onChanged()
+    else router.refresh()
+  }
+
+  const handleRemoveAnggota = async (wargaId: string) => {
+    if (!confirm("Hapus anggota ini dari Kartu Keluarga?")) return
+
+    setIsDeleting(wargaId)
+    try {
+      const baseEndpoint = user?.role === "super-admin" ? "/rw/kartu-keluarga" : "/rt/kartu-keluarga"
+      const response = await fetchWithAuth(`${baseEndpoint}/${kk.id}/anggota/${wargaId}`, {
+        method: "DELETE"
+      })
+
+      if (response.ok) {
+        toast.success("Anggota berhasil dihapus")
+        refreshData()
+      } else {
+        toast.error("Gagal menghapus anggota")
+      }
+    } catch (e) {
+      toast.error("Kesalahan koneksi")
+    } finally {
+      setIsDeleting(null)
+    }
+  }
+
+  const handleUpdateHubungan = async (wargaId: string, hubungan_keluarga: string) => {
+    setIsUpdating(wargaId)
+    try {
+      const baseEndpoint = user?.role === "super-admin" ? "/rw/kartu-keluarga" : "/rt/kartu-keluarga"
+      const response = await fetchWithAuth(`${baseEndpoint}/${kk.id}/anggota/${wargaId}`, {
+        method: "PUT",
+        body: JSON.stringify({ hubungan_keluarga }),
+      })
+
+      if (response.ok) {
+        toast.success("Hubungan keluarga berhasil diupdate")
+        refreshData()
+      } else {
+        const err = await response.json().catch(() => null)
+        toast.error(err?.message || "Gagal mengupdate hubungan keluarga")
+      }
+    } catch {
+      toast.error("Kesalahan koneksi")
+    } finally {
+      setIsUpdating(null)
+    }
+  }
 
   return (
     <>
@@ -31,10 +105,11 @@ export function KKDetail({ kk, backHref, wargaHrefBase, canManage = true }: KKDe
           </Link>
         </Button>
         {canManage ? (
-          <Button onClick={() => toast.info("Form tambah anggota keluarga akan dibuka")}>
-            <UserPlus className="size-4" />
-            Tambah Anggota
-          </Button>
+          <AnggotaFormDialog 
+            kkId={kk.id} 
+            rt={kk.rt} 
+            onSuccess={refreshData} 
+          />
         ) : null}
       </div>
 
@@ -144,7 +219,24 @@ export function KKDetail({ kk, backHref, wargaHrefBase, canManage = true }: KKDe
                       </TableCell>
                       <TableCell className="font-mono text-xs">{a.nik}</TableCell>
                       <TableCell>
-                        {a.hubunganKeluarga === "Kepala Keluarga" ? (
+                        {canManage ? (
+                          <Select
+                            value={a.hubunganKeluarga || ""}
+                            onValueChange={(v) => handleUpdateHubungan(String(a.id), v)}
+                            disabled={isUpdating === String(a.id)}
+                          >
+                            <SelectTrigger className="h-8 w-[170px]">
+                              <SelectValue placeholder="Pilih hubungan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {HUBUNGAN_OPTIONS.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : a.hubunganKeluarga === "Kepala Keluarga" ? (
                           <Badge className="bg-primary text-primary-foreground">{a.hubunganKeluarga}</Badge>
                         ) : (
                           <Badge variant="secondary">{a.hubunganKeluarga}</Badge>
@@ -153,9 +245,26 @@ export function KKDetail({ kk, backHref, wargaHrefBase, canManage = true }: KKDe
                       <TableCell>{a.jenisKelamin}</TableCell>
                       <TableCell>{calculateAge(a.tanggalLahir)} thn</TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`${wargaHrefBase}/${a.id}`}>Detail</Link>
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`${wargaHrefBase}/${a.id}`}>Detail</Link>
+                          </Button>
+                          {canManage && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleRemoveAnggota(String(a.id))}
+                              disabled={isDeleting === String(a.id)}
+                            >
+                              {isDeleting === String(a.id) ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="size-4" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

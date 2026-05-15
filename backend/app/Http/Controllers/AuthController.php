@@ -6,9 +6,24 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Warga;
+use App\Models\KartuKeluarga;
+use Illuminate\Support\Facades\Schema;
 
 class AuthController extends Controller
 {
+    // Public Stats for Login Page
+    public function publicStats()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_warga' => Warga::count(),
+                'total_kk'    => KartuKeluarga::count(),
+                'total_rt'    => 8, // Fixed to 8 as requested
+            ]
+        ]);
+    }
+
     // Login
     public function login(Request $request)
     {
@@ -17,9 +32,111 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('username', $request->username)->first();
+        $inputUsername = trim((string) $request->username);
+        $inputPassword = trim((string) $request->password);
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        $normalizeRt = function (?string $value) {
+            if ($value === null) return null;
+            $digits = preg_replace('/\D+/', '', $value);
+            if (!$digits) return null;
+            if (strlen($digits) === 1) $digits = '0' . $digits;
+            return substr($digits, -2);
+        };
+
+        $requestedRt = $normalizeRt($inputPassword);
+
+        $user = User::where('username', $inputUsername)->first();
+        if (!$user) {
+            $q = User::where('role', 'warga')
+                ->where(function ($qq) use ($inputUsername) {
+                    $u = strtolower($inputUsername);
+                    $qq->whereRaw('LOWER(name) = ?', [$u])
+                        ->orWhereRaw('LOWER(username) = ?', [$u]);
+                });
+
+            if ($requestedRt) {
+                $rtCandidates = array_values(array_unique(array_filter([
+                    $requestedRt,
+                    ltrim($requestedRt, '0'),
+                    'RT ' . $requestedRt,
+                    'RT' . $requestedRt,
+                ])));
+                $q->where(function ($qq) use ($rtCandidates) {
+                    foreach ($rtCandidates as $rtVal) {
+                        $qq->orWhere('rt', $rtVal);
+                    }
+                });
+            }
+
+            $user = $q->first();
+        }
+
+        if (!$user && $requestedRt) {
+            $warga = Warga::whereRaw('LOWER(TRIM(nama)) = ?', [strtolower($inputUsername)])
+                ->get(['id', 'nama', 'nik', 'rt'])
+                ->first(function ($w) use ($normalizeRt, $requestedRt) {
+                    return $requestedRt && $normalizeRt($w->rt) === $requestedRt;
+                });
+
+            if ($warga) {
+                $user = User::where('role', 'warga')->where('nik', $warga->nik)->first();
+
+                if (!$user) {
+                    $baseUsername = trim((string) $warga->nama);
+                    $username = $baseUsername;
+                    $suffix = 1;
+                    while (User::where('username', $username)->exists()) {
+                        $suffix++;
+                        $username = $baseUsername . ' ' . $requestedRt . ' ' . $suffix;
+                    }
+
+                    $userData = [
+                        'name' => $warga->nama,
+                        'username' => $username,
+                        'email' => $warga->nik . '@sitegar.com',
+                        'nik' => $warga->nik,
+                        'password' => Hash::make($requestedRt),
+                        'role' => 'warga',
+                        'rt' => $requestedRt,
+                    ];
+
+                    if (Schema::hasColumn('users', 'warga_id')) {
+                        $userData['warga_id'] = $warga->id;
+                    }
+
+                    $user = User::create($userData);
+                } else {
+                    $userRt = $normalizeRt($user->rt);
+                    if (!$userRt || $userRt !== $requestedRt) {
+                        $user->rt = $requestedRt;
+                        $user->save();
+                    }
+                }
+            }
+        }
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Username atau password salah'
+            ], 401);
+        }
+
+        $ok = false;
+        if ($user->role === 'warga') {
+            $userRt = $normalizeRt($user->rt);
+            $profilRt = null;
+            if ($user->nik) {
+                $profil = Warga::where('nik', $user->nik)->first();
+                $profilRt = $normalizeRt($profil ? $profil->rt : null);
+            }
+
+            $rtToCheck = $profilRt ?: $userRt;
+            $ok = ($requestedRt && $rtToCheck && $requestedRt === $rtToCheck);
+        } else {
+            $ok = Hash::check($inputPassword, $user->password);
+        }
+
+        if (!$ok) {
             return response()->json([
                 'message' => 'Username atau password salah'
             ], 401);
@@ -37,6 +154,7 @@ class AuthController extends Controller
                 'nik'      => $user->nik,
                 'role'     => $user->role,
                 'rt'       => $user->rt,
+                'warga_id' => Schema::hasColumn('users', 'warga_id') ? $user->warga_id : null,
             ]
         ]);
     }
@@ -45,10 +163,8 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'username'          => 'required|string|unique:users,username',
             'nik'               => 'required|string|size:16|unique:users,nik',
             'nama'              => 'required|string',
-            'password'          => 'required|string|min:6',
             'jenis_kelamin'     => 'required|in:L,P',
             'tempat_lahir'      => 'required|string',
             'tanggal_lahir'     => 'required|date',
@@ -78,15 +194,29 @@ class AuthController extends Controller
         ]);
 
         // Buat akun user untuk warga
-        $user = User::create([
+        $baseUsername = trim($request->nama);
+        $username = $baseUsername;
+        $suffix = 1;
+        while (User::where('username', $username)->exists()) {
+            $suffix++;
+            $username = $baseUsername . ' ' . $request->rt . ' ' . $suffix;
+        }
+
+        $userData = [
             'name'     => $request->nama,
-            'username' => $request->username,
+            'username' => $username,
             'email'    => $request->nik . '@sitegar.com',
             'nik'      => $request->nik,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($request->rt),
             'role'     => 'warga',
             'rt'       => $request->rt,
-            'warga_id' => $warga->id,
+        ];
+        if (Schema::hasColumn('users', 'warga_id')) {
+            $userData['warga_id'] = $warga->id;
+        }
+
+        $user = User::create([
+            ...$userData,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;

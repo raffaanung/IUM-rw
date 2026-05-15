@@ -11,7 +11,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Popover,
@@ -26,42 +25,59 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { Check, ChevronsUpDown, Plus, Search } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Check, ChevronsUpDown, UserPlus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { fetchWithAuth, useAuth } from "@/lib/auth-context"
 import type { Warga } from "@/lib/types"
 
-interface KKFormDialogProps {
-  rt?: string
+interface AnggotaFormDialogProps {
+  kkId: string
+  rt: string
   onSuccess?: () => void
 }
 
-export function KKFormDialog({ rt, onSuccess }: KKFormDialogProps) {
+const HUBUNGAN_OPTIONS = [
+  "Istri",
+  "Anak",
+  "Orang Tua",
+  "Mertua",
+  "Cucu",
+  "Famili Lain",
+  "Lainnya",
+]
+
+export function AnggotaFormDialog({ kkId, rt, onSuccess }: AnggotaFormDialogProps) {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [openSearch, setOpenSearch] = useState(false)
   const [loading, setLoading] = useState(false)
   const [wargaList, setWargaList] = useState<Warga[]>([])
   const [formData, setFormData] = useState({
-    no_kk: "",
     warga_id: "",
-    alamat: "",
-    rt: rt || "",
+    hubungan_keluarga: "",
   })
 
-  // Selected warga label for display in trigger
   const selectedWarga = wargaList.find((w) => String(w.id) === formData.warga_id)
 
-  // Fetch warga list for head of family selection
   useEffect(() => {
     if (open) {
       const fetchWarga = async () => {
         try {
           const endpoint = user?.role === "super-admin" ? "/rw/warga" : "/rt/warga"
-          const res = await fetchWithAuth(endpoint)
+          // We might want to filter by RT if RW is adding
+          const res = await fetchWithAuth(`${endpoint}?rt=${rt}`)
           const data = await res.json()
           if (data.success) {
+            // Filter out warga who already have a KK if needed, 
+            // but for now just show all in that RT
             setWargaList(data.data)
           }
         } catch (e) {
@@ -70,25 +86,25 @@ export function KKFormDialog({ rt, onSuccess }: KKFormDialogProps) {
       }
       fetchWarga()
     }
-  }, [open, user])
+  }, [open, user, rt])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!/^\d{16}$/.test(formData.no_kk)) {
-      toast.error("No. KK harus berjumlah 16 digit angka")
+
+    if (!formData.warga_id) {
+      toast.error("Silakan pilih warga")
       return
     }
 
-    if (!formData.warga_id) {
-      toast.error("Silakan pilih Kepala Keluarga")
+    if (!formData.hubungan_keluarga) {
+      toast.error("Silakan pilih hubungan keluarga")
       return
     }
 
     setLoading(true)
     try {
-      const endpoint = user?.role === "super-admin" ? "/rw/kartu-keluarga" : "/rt/kartu-keluarga"
-      const response = await fetchWithAuth(endpoint, {
+      const baseEndpoint = user?.role === "super-admin" ? "/rw/kartu-keluarga" : "/rt/kartu-keluarga"
+      const response = await fetchWithAuth(`${baseEndpoint}/${kkId}/anggota`, {
         method: "POST",
         body: JSON.stringify(formData),
       })
@@ -96,18 +112,11 @@ export function KKFormDialog({ rt, onSuccess }: KKFormDialogProps) {
       const data = await response.json()
 
       if (response.ok) {
-        toast.success("Data Kartu Keluarga berhasil ditambahkan")
+        toast.success("Anggota keluarga berhasil ditambahkan")
         setOpen(false)
         onSuccess?.()
-        // Reset form
-        setFormData({
-          no_kk: "",
-          warga_id: "",
-          alamat: "",
-          rt: rt || "",
-        })
+        setFormData({ warga_id: "", hubungan_keluarga: "" })
       } else {
-        // Jika ada detail error validasi dari Laravel
         if (data.data && typeof data.data === 'object') {
           const firstError = Object.values(data.data)[0] as string[]
           toast.error(firstError[0] || data.message)
@@ -125,33 +134,22 @@ export function KKFormDialog({ rt, onSuccess }: KKFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-green-600 hover:bg-green-700 text-white">
-          <Plus className="size-4" />
-          Tambah KK
+        <Button>
+          <UserPlus className="size-4" />
+          Tambah Anggota
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[450px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Tambah Kartu Keluarga</DialogTitle>
+            <DialogTitle>Tambah Anggota Keluarga</DialogTitle>
             <DialogDescription>
-              Isi data Kartu Keluarga baru di bawah ini.
+              Pilih warga untuk ditambahkan ke dalam Kartu Keluarga ini.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="no_kk">No. KK</Label>
-              <Input
-                id="no_kk"
-                placeholder="16 digit No. KK"
-                value={formData.no_kk}
-                onChange={(e) => setFormData({ ...formData, no_kk: e.target.value })}
-                required
-                maxLength={16}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="kepala_keluarga">Kepala Keluarga</Label>
+              <Label>Pilih Warga</Label>
               <Popover open={openSearch} onOpenChange={setOpenSearch}>
                 <PopoverTrigger asChild>
                   <Button
@@ -162,13 +160,13 @@ export function KKFormDialog({ rt, onSuccess }: KKFormDialogProps) {
                   >
                     {selectedWarga 
                       ? `${selectedWarga.nama} (${selectedWarga.nik})` 
-                      : "Pilih Kepala Keluarga..."}
+                      : "Cari warga..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[450px] p-0" align="start">
+                <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Cari warga (Nama atau NIK)..." />
+                    <CommandInput placeholder="Nama atau NIK..." />
                     <CommandList>
                       <CommandEmpty>Warga tidak ditemukan.</CommandEmpty>
                       <CommandGroup>
@@ -199,34 +197,32 @@ export function KKFormDialog({ rt, onSuccess }: KKFormDialogProps) {
                 </PopoverContent>
               </Popover>
             </div>
+
             <div className="flex flex-col gap-2">
-              <Label htmlFor="alamat">Alamat</Label>
-              <Input
-                id="alamat"
-                placeholder="Alamat sesuai KK"
-                value={formData.alamat}
-                onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="rt">RT</Label>
-              <Input
-                id="rt"
-                value={formData.rt}
-                onChange={(e) => setFormData({ ...formData, rt: e.target.value })}
-                placeholder="00"
-                required
-                disabled={!!rt}
-              />
+              <Label htmlFor="hubungan">Hubungan Keluarga</Label>
+              <Select
+                value={formData.hubungan_keluarga}
+                onValueChange={(v) => setFormData({ ...formData, hubungan_keluarga: v })}
+              >
+                <SelectTrigger id="hubungan">
+                  <SelectValue placeholder="Pilih hubungan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {HUBUNGAN_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={loading}>
-              {loading ? "Menyimpan..." : "Simpan Data"}
+            <Button type="submit" disabled={loading}>
+              {loading ? "Proses..." : "Simpan Anggota"}
             </Button>
           </DialogFooter>
         </form>

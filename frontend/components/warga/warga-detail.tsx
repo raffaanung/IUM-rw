@@ -8,6 +8,9 @@ import { Separator } from "@/components/ui/separator"
 import { StatusBadge } from "./warga-table"
 import { ArrowLeft, Briefcase, Calendar, GraduationCap, Heart, Mail, MapPin, Phone, Pencil, Wallet } from "lucide-react"
 
+import { WargaFormDialog } from "./warga-form-dialog"
+import { useRouter } from "next/navigation"
+
 interface WargaDetailProps {
   warga: Warga
   backHref: string
@@ -15,6 +18,7 @@ interface WargaDetailProps {
 }
 
 export function WargaDetail({ warga, backHref, canEdit = true }: WargaDetailProps) {
+  const router = useRouter()
   const initials = warga.nama
     .split(" ")
     .slice(0, 2)
@@ -33,10 +37,13 @@ export function WargaDetail({ warga, backHref, canEdit = true }: WargaDetailProp
           </Link>
         </Button>
         {canEdit ? (
-          <Button>
-            <Pencil className="size-4" />
-            Edit Data
-          </Button>
+          <WargaFormDialog 
+            mode="edit" 
+            initialData={warga} 
+            onSuccess={() => router.refresh()} 
+            rt={warga.rt}
+            triggerVariant="button"
+          />
         ) : null}
       </div>
 

@@ -14,8 +14,8 @@ return new class extends Migration
             $table->text('keterangan')->nullable();
             $table->bigInteger('jumlah'); // positif = pemasukan, negatif = pengeluaran
             $table->enum('jenis', ['pemasukan', 'pengeluaran']);
-            $table->enum('kategori', ['rw', 'rt']);
-            $table->string('rt', 3)->nullable(); // diisi kalau kategori = rt
+            $table->string('kategori');
+            $table->string('rt', 3)->nullable(); // diisi kalau kategori = rt atau transaksi tingkat RT
             $table->date('tanggal');
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->timestamps();

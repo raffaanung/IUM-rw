@@ -1,7 +1,38 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { LoginForm } from "@/components/auth/login-form"
-import { Building2 } from "lucide-react"
+import { Building2, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
+  const [stats, setStats] = useState({
+    totalWarga: 0,
+    totalKK: 0,
+    totalRT: 8,
+    loading: true
+  })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/api/public-stats")
+        const json = await res.json()
+        if (json.success) {
+          setStats({
+            totalWarga: json.data.total_warga,
+            totalKK: json.data.total_kk,
+            totalRT: json.data.total_rt,
+            loading: false
+          })
+        }
+      } catch (e) {
+        console.error("Failed to fetch public stats", e)
+        setStats(prev => ({ ...prev, loading: false }))
+      }
+    }
+    fetchStats()
+  }, [])
+
   return (
     <main className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Left brand panel */}
@@ -16,8 +47,8 @@ export default function LoginPage() {
             <Building2 className="size-6" />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-widest opacity-80">Sistem Informasi</p>
-            <p className="font-semibold text-lg">SIWARGA RW 05</p>
+            <p className="text-xs uppercase tracking-widest opacity-80">Sistem Informasi Data Terpadu Warga</p>
+            <p className="font-semibold text-lg">SITEGAR RW 08</p>
           </div>
         </header>
 
@@ -32,9 +63,9 @@ export default function LoginPage() {
         </div>
 
         <div className="relative grid grid-cols-3 gap-4 max-w-md">
-          <Stat label="Total Warga" value="20" />
-          <Stat label="Total KK" value="13" />
-          <Stat label="RT Aktif" value="5" />
+          <Stat label="Total Warga" value={stats.loading ? "..." : String(stats.totalWarga)} />
+          <Stat label="Total KK" value={stats.loading ? "..." : String(stats.totalKK)} />
+          <Stat label="RT Aktif" value={stats.loading ? "..." : String(stats.totalRT)} />
         </div>
       </section>
 
@@ -46,8 +77,8 @@ export default function LoginPage() {
               <Building2 className="size-6" />
             </div>
             <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Sistem Informasi</p>
-              <p className="font-semibold text-lg">SIWARGA RW 05</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Sistem Informasi Data Terpadu Warga</p>
+              <p className="font-semibold text-lg">SITEGAR RW 08</p>
             </div>
           </div>
 

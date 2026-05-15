@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,8 @@ import {
 import { Plus } from "lucide-react"
 import { toast } from "sonner"
 
-import { fetchWithAuth } from "@/lib/auth-context"
+import { fetchWithAuth, useAuth } from "@/lib/auth-context"
+import { RT_LIST } from "@/lib/mock-data"
 
 interface LaporanFormDialogProps {
   rt?: string
@@ -32,25 +33,64 @@ interface LaporanFormDialogProps {
 }
 
 export function LaporanFormDialog({ rt, pencatat, onSuccess }: LaporanFormDialogProps) {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     tanggal: new Date().toISOString().split('T')[0],
     judul: "",
-    kategori: "",
-    jenis: "",
-    jumlah: 0,
+    kategori: "Iuran Bulanan",
+    jenis: "masuk",
+    jumlahText: "",
     rt: rt || "",
   })
 
+  const isRw = user?.role === "super-admin"
+  const isRtAdmin = user?.role === "admin"
+
+  const pencatatLabel = pencatat ?? (isRw ? "RW 08" : (user?.nama ?? ""))
+
+  // Update RT value based on user/role
+  useEffect(() => {
+    if (!user) return
+    if (isRtAdmin) {
+      setFormData((prev) => ({
+        ...prev,
+        rt: user.rt || rt || "",
+      }))
+    }
+  }, [isRtAdmin, rt, user])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    const jumlah = Number(formData.jumlahText)
+    if (!Number.isFinite(jumlah) || jumlah <= 0) {
+      toast.error("Jumlah harus lebih dari 0")
+      return
+    }
+
+    if (isRw && !formData.rt) {
+      toast.error("RT wajib dipilih")
+      return
+    }
+
     setLoading(true)
     
     try {
-      const response = await fetchWithAuth("/rt/keuangan", {
+      const endpoint = isRw ? "/rw/keuangan" : "/rt/keuangan"
+      const payload: Record<string, unknown> = {
+        tanggal: formData.tanggal,
+        judul: formData.judul,
+        kategori: formData.kategori,
+        jenis: formData.jenis === "masuk" ? "pemasukan" : "pengeluaran",
+        jumlah,
+      }
+      if (isRw) payload.rt = formData.rt
+
+      const response = await fetchWithAuth(endpoint, {
         method: "POST",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -59,8 +99,23 @@ export function LaporanFormDialog({ rt, pencatat, onSuccess }: LaporanFormDialog
         toast.success("Laporan keuangan berhasil ditambahkan")
         setOpen(false)
         onSuccess?.()
+        // Reset form
+        setFormData({
+          tanggal: new Date().toISOString().split('T')[0],
+          judul: "",
+          kategori: "Iuran Bulanan",
+          jenis: "masuk",
+          jumlahText: "",
+          rt: isRw ? "" : (rt || user?.rt || ""),
+        })
       } else {
-        toast.error(data.message || "Gagal menyimpan data")
+        // Jika ada detail error validasi dari Laravel
+        if (data.data && typeof data.data === 'object') {
+          const firstError = Object.values(data.data)[0] as string[]
+          toast.error(firstError[0] || data.message)
+        } else {
+          toast.error(data.message || "Gagal menyimpan data")
+        }
       }
     } catch (error) {
       toast.error("Terjadi kesalahan koneksi")
@@ -136,8 +191,8 @@ export function LaporanFormDialog({ rt, pencatat, onSuccess }: LaporanFormDialog
                   <SelectValue placeholder="Pilih Jenis" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pemasukan">Pemasukan</SelectItem>
-                  <SelectItem value="pengeluaran">Pengeluaran</SelectItem>
+                  <SelectItem value="masuk">Pemasukan</SelectItem>
+                  <SelectItem value="keluar">Pengeluaran</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -147,29 +202,49 @@ export function LaporanFormDialog({ rt, pencatat, onSuccess }: LaporanFormDialog
                 id="jumlah"
                 type="number"
                 placeholder="0"
-                value={formData.jumlah}
-                onChange={(e) => setFormData({ ...formData, jumlah: Number(e.target.value) })}
+                min={0}
+                value={formData.jumlahText}
+                onChange={(e) => setFormData({ ...formData, jumlahText: e.target.value })}
                 required
               />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="rt">RT</Label>
-              <Input
-                id="rt"
-                value={formData.rt}
-                placeholder="00"
-                disabled={!!rt}
-                required
-              />
+              {isRw ? (
+                <Select
+                  value={formData.rt}
+                  onValueChange={(v) => setFormData({ ...formData, rt: v })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih RT" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RT_LIST.map((rtItem) => (
+                      <SelectItem key={rtItem} value={rtItem}>
+                        RT {rtItem}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="rt"
+                  value={formData.rt}
+                  placeholder="00"
+                  disabled
+                  required
+                />
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="pencatat">Pencatat</Label>
               <Input
                 id="pencatat"
-                defaultValue={pencatat}
+                value={pencatatLabel}
                 placeholder="Nama Petugas"
                 required
-                disabled={!!pencatat}
+                disabled
               />
             </div>
           </div>

@@ -1,4 +1,4 @@
-# SIWARGA — Sistem Informasi Demografis & Keuangan RW
+# SITEGAR — Sistem Informasi Demografis & Keuangan RW
 
 Proyek ini adalah sistem manajemen data warga dan keuangan tingkat Rukun Tetangga (RT) dan Rukun Warga (RW) yang terintegrasi.
 

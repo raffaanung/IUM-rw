@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/layout/page-header"
 import { KeuanganSummary } from "@/components/keuangan/keuangan-summary"
 import { TransaksiTable } from "@/components/keuangan/transaksi-table"
 import { LaporanFormDialog } from "@/components/keuangan/laporan-form-dialog"
-import { getStatistikKeuangan } from "@/lib/mock-data"
 import type { Transaksi } from "@/lib/types"
 
 export default function AdminKeuanganPage() {
@@ -27,8 +26,8 @@ export default function AdminKeuanganPage() {
           keterangan: t.judul,
           kategori: t.kategori,
           jumlah: Number(t.jumlah),
-          jenis: t.jenis,
-          pencatat: t.user?.name || "Sistem"
+          jenis: t.jenis === "pemasukan" ? "masuk" : "keluar",
+          pencatat: t.user?.name || t.pencatat || "Sistem"
         }))
         setTransaksi(mappedData)
       }
@@ -48,14 +47,11 @@ export default function AdminKeuanganPage() {
   if (!user || !user.rt) return null
 
   const rt = user.rt
-  const stats = getStatistikKeuangan(rt)
 
   // Hitung saldo dinamis dari data asli jika ada
-  const saldoAsli = transaksi.reduce((acc, curr) => 
-    curr.jenis === 'pemasukan' ? acc + curr.jumlah : acc - curr.jumlah, 0
-  )
-  const masukAsli = transaksi.filter(t => t.jenis === 'pemasukan').reduce((s, t) => s + t.jumlah, 0)
-  const keluarAsli = transaksi.filter(t => t.jenis === 'pengeluaran').reduce((s, t) => s + t.jumlah, 0)
+  const saldoAsli = transaksi.reduce((acc, curr) => (curr.jenis === "masuk" ? acc + curr.jumlah : acc - curr.jumlah), 0)
+  const masukAsli = transaksi.filter((t) => t.jenis === "masuk").reduce((s, t) => s + t.jumlah, 0)
+  const keluarAsli = transaksi.filter((t) => t.jenis === "keluar").reduce((s, t) => s + t.jumlah, 0)
 
   return (
     <>
@@ -66,9 +62,9 @@ export default function AdminKeuanganPage() {
       />
 
       <KeuanganSummary 
-        saldo={transaksi.length > 0 ? saldoAsli : stats.saldo} 
-        masuk={transaksi.length > 0 ? masukAsli : stats.masuk} 
-        keluar={transaksi.length > 0 ? keluarAsli : stats.keluar} 
+        saldo={saldoAsli} 
+        masuk={masukAsli} 
+        keluar={keluarAsli} 
       />
 
       <TransaksiTable data={transaksi} showRT={false} />

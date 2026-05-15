@@ -7,6 +7,7 @@ import type { User } from "./types"
 const API_URL = "http://127.0.0.1:8000/api"
 const STORAGE_KEY = "siwarga_session"
 const TOKEN_KEY = "siwarga_token"
+const FIXED_RW = "08"
 
 export async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   const token = typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY) : null
@@ -53,11 +54,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
+  // Fungsi helper untuk normalisasi role
+  const normalizeRole = (role: string | undefined, username?: string): Role => {
+    const r = role?.toLowerCase()
+    if (r === "rw" || r === "super-admin") return "super-admin"
+    if (r === "rt" || r === "admin") return "admin"
+    
+    // Fallback berdasarkan username jika role kosong (bug database)
+    if (username === "superadmin") return "super-admin"
+    if (username?.startsWith("admin")) return "admin"
+    
+    return "warga"
+  }
+
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY)
       if (stored) {
-        setUser(JSON.parse(stored))
+        const parsedUser = JSON.parse(stored)
+        
+        // Pastikan role ternormalisasi
+        parsedUser.role = normalizeRole(parsedUser.role, parsedUser.username)
+        parsedUser.rw = FIXED_RW
+        setUser(parsedUser)
       }
     } catch {
       // ignore
@@ -74,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "Accept": "application/json",
         },
         body: JSON.stringify({ username, password }),
+        mode: "cors",
       })
 
       const data = await response.json()
@@ -86,9 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: String(data.user.id),
         username: data.user.username,
         nama: data.user.name,
-        role: data.user.role === "rw" ? "super-admin" : data.user.role === "rt" ? "admin" : "warga",
+        role: normalizeRole(data.user.role, data.user.username),
         rt: data.user.rt ?? undefined,
-        rw: "05",
+        rw: FIXED_RW,
         nik: data.user.nik,
       }
 

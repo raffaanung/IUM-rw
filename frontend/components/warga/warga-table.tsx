@@ -23,25 +23,63 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Eye, MoreHorizontal, Pencil, Search, Trash2, UserPlus, Download } from "lucide-react"
+import { Eye, MoreHorizontal, Pencil, Search, Trash2, UserPlus, Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { WargaFormDialog } from "./warga-form-dialog"
+import { fetchWithAuth, useAuth } from "@/lib/auth-context"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface WargaTableProps {
   data: Warga[]
   detailHrefBase: string
   showRT?: boolean
   canManage?: boolean
+  allowSelfEdit?: boolean
   onAdd?: () => void
   rt?: string
 }
 
-export function WargaTable({ data, detailHrefBase, showRT = true, canManage = true, onAdd, rt }: WargaTableProps) {
+export function WargaTable({ data, detailHrefBase, showRT = true, canManage = true, allowSelfEdit = false, onAdd, rt }: WargaTableProps) {
+  const { user } = useAuth()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [rtFilter, setRtFilter] = useState<string>("all")
   const [page, setPage] = useState(1)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const pageSize = 8
+  const showActions = canManage || allowSelfEdit
+
+  const handleDelete = async (id: string) => {
+    setIsDeleting(id)
+    try {
+      const baseEndpoint = user?.role === "super-admin" ? "/rw/warga" : "/rt/warga"
+      const response = await fetchWithAuth(`${baseEndpoint}/${id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        toast.success("Data warga berhasil dihapus")
+        onAdd?.() // Refresh data
+      } else {
+        const err = await response.json()
+        toast.error(err.message || "Gagal menghapus data")
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan koneksi")
+    } finally {
+      setIsDeleting(null)
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!Array.isArray(data)) return []
@@ -148,7 +186,7 @@ export function WargaTable({ data, detailHrefBase, showRT = true, canManage = tr
               </SelectContent>
             </Select>
           ) : null}
-          {canManage ? <WargaFormDialog rt={rt} /> : null}
+          {canManage ? <WargaFormDialog rt={rt} onSuccess={onAdd} /> : null}
         </div>
       </div>
 
@@ -162,13 +200,13 @@ export function WargaTable({ data, detailHrefBase, showRT = true, canManage = tr
               <TableHead>Alamat</TableHead>
               {showRT ? <TableHead>RT</TableHead> : null}
               <TableHead>Status</TableHead>
-              {canManage ? <TableHead className="w-[80px] text-right">Aksi</TableHead> : null}
+              {showActions ? <TableHead className="w-[120px] text-right">Aksi</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {pageData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canManage ? 7 : 6} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={showActions ? 7 : 6} className="text-center text-muted-foreground py-12">
                   Tidak ada data warga yang cocok dengan filter.
                 </TableCell>
               </TableRow>
@@ -199,20 +237,59 @@ export function WargaTable({ data, detailHrefBase, showRT = true, canManage = tr
                               Lihat Detail
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.info("Edit data warga")}>
-                            <Pencil className="size-4" />
-                            Edit Data
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => toast.warning(`Konfirmasi hapus ${w.nama}`)}
-                          >
-                            <Trash2 className="size-4" />
-                            Hapus
-                          </DropdownMenuItem>
+                          {canManage && (
+                            <>
+                              <WargaFormDialog 
+                                mode="edit" 
+                                initialData={w} 
+                                onSuccess={onAdd} 
+                                rt={rt} 
+                              />
+                              <DropdownMenuSeparator />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem 
+                                    className="text-destructive focus:text-destructive"
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    {isDeleting === String(w.id) ? (
+                                      <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="size-4" />
+                                    )}
+                                    Hapus
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Apakah Anda yakin ingin menghapus data warga <strong>{w.nama}</strong>? Tindakan ini tidak dapat dibatalkan.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handleDelete(String(w.id))}
+                                    >
+                                      Hapus
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
+                    </TableCell>
+                  ) : allowSelfEdit ? (
+                    <TableCell className="text-right">
+                      {user?.nik && w.nik === user.nik ? (
+                        <WargaFormDialog mode="edit" initialData={w} onSuccess={onAdd} triggerVariant="button" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   ) : null}
                 </TableRow>

@@ -15,7 +15,10 @@ export type HubunganKeluarga =
   | "Anak"
   | "Orang Tua"
   | "Mertua"
+  | "Cucu"
   | "Famili Lain"
+  | "Anggota"
+  | "Lainnya"
 
 export interface Warga {
   id: string
@@ -41,6 +44,7 @@ export interface Warga {
 }
 
 export interface KartuKeluarga {
+  id: string
   noKK: string
   kepalaKeluarga: string
   alamat: string

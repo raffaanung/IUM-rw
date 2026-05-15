@@ -28,6 +28,8 @@ export function LoginForm() {
       setLoading(false)
     } else {
       toast.success("Login berhasil")
+      // Redirect handled by AuthProvider, but we keep loading true 
+      // until navigation starts to prevent multiple clicks
     }
   }
 

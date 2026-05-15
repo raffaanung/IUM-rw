@@ -1,17 +1,13 @@
 "use client"
 
-import { useAuth } from "@/lib/auth-context"
+import { useEffect, useMemo, useState } from "react"
+import { fetchWithAuth, useAuth } from "@/lib/auth-context"
 import { PageHeader } from "@/components/layout/page-header"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import {
-  formatRupiah,
-  formatTanggal,
-  getStatistikKeuangan,
-  MOCK_WARGA,
-} from "@/lib/mock-data"
+import { formatRupiah, formatTanggal } from "@/lib/mock-data"
 import { ArrowDownCircle, ArrowUpCircle, Eye, Wallet } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -20,23 +16,55 @@ export function WargaDashboardClient() {
   const { user } = useAuth()
   if (!user || !user.rt) return null
 
-  const rt = user.rt
-  const keuangan = getStatistikKeuangan(rt)
-  const wargaSelf = MOCK_WARGA.find((w) => w.nik === user.nik)
-  const recent = [...keuangan.transaksi]
-    .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
-    .slice(0, 5)
+  const [effectiveRt, setEffectiveRt] = useState(user.rt)
+  const [loading, setLoading] = useState(true)
+  const [saldo, setSaldo] = useState(0)
+  const [masuk, setMasuk] = useState(0)
+  const [keluar, setKeluar] = useState(0)
+  const [recent, setRecent] = useState<any[]>([])
+  const [statusWarga, setStatusWarga] = useState<string | null>(null)
 
-  const initials = user.nama
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const res = await fetchWithAuth("/portal-warga/dashboard")
+        const json = await res.json()
+        if (json.success) {
+          if (json.data.user?.rt) setEffectiveRt(String(json.data.user.rt))
+          setSaldo(Number(json.data.keuangan?.saldo_kas || 0))
+          setMasuk(Number(json.data.keuangan?.total_pemasukan || 0))
+          setKeluar(Number(json.data.keuangan?.total_pengeluaran || 0))
+          setRecent(Array.isArray(json.data.transaksi_terbaru) ? json.data.transaksi_terbaru : [])
+
+          const self = json.data.profil_warga
+          if (self && self.status_warga) {
+            setStatusWarga(String(self.status_warga))
+          } else {
+            setStatusWarga(null)
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
+    }
+    run()
+  }, [])
+
+  const initials = useMemo(() => {
+    return user.nama
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+  }, [user.nama])
 
   return (
     <>
-      <PageHeader title="Dashboard Warga" description={`Informasi umum dan transparansi keuangan RT ${rt}.`} />
+      <PageHeader title="Dashboard Warga" description={`Informasi umum dan transparansi keuangan RT ${effectiveRt}.`} />
 
       {/* Welcome card */}
       <Card className="mb-6 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
@@ -52,38 +80,36 @@ export function WargaDashboardClient() {
               <h2 className="text-xl font-bold">{user.nama}</h2>
               <p className="text-sm opacity-80 mt-1">
                 Warga RT {user.rt} / RW {user.rw}
-                {wargaSelf ? ` · ${wargaSelf.statusKependudukan}` : ""}
+                {statusWarga ? ` · ${statusWarga}` : ""}
               </p>
             </div>
           </div>
-          {wargaSelf ? (
-            <Button asChild variant="secondary">
-              <Link href="/warga/daftar-warga">
-                <Eye className="size-4" />
-                Lihat Profil
-              </Link>
-            </Button>
-          ) : null}
+          <Button asChild variant="secondary">
+            <Link href="/warga/daftar-warga">
+              <Eye className="size-4" />
+              Lihat Profil
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <StatCard
           title="Saldo Kas RT"
-          value={formatRupiah(keuangan.saldo)}
-          description={`RT ${rt}`}
+          value={formatRupiah(saldo)}
+          description={`RT ${effectiveRt}`}
           icon={Wallet}
           variant="primary"
         />
         <StatCard
           title="Pemasukan"
-          value={formatRupiah(keuangan.masuk)}
+          value={formatRupiah(masuk)}
           icon={ArrowUpCircle}
           variant="success"
         />
         <StatCard
           title="Pengeluaran"
-          value={formatRupiah(keuangan.keluar)}
+          value={formatRupiah(keluar)}
           icon={ArrowDownCircle}
           variant="danger"
         />
@@ -93,14 +119,16 @@ export function WargaDashboardClient() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Transaksi Terbaru</CardTitle>
-            <CardDescription>Transparansi arus kas RT {rt}</CardDescription>
+            <CardDescription>Transparansi arus kas RT {effectiveRt}</CardDescription>
           </div>
           <Button asChild variant="outline" size="sm">
             <Link href="/warga/keuangan">Lihat Semua</Link>
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
-          {recent.length === 0 ? (
+          {loading ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Memuat...</p>
+          ) : recent.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">Belum ada transaksi tercatat.</p>
           ) : (
             recent.map((t) => (
@@ -132,7 +160,7 @@ export function WargaDashboardClient() {
                       : "font-semibold text-destructive whitespace-nowrap"
                   }
                 >
-                  {t.jenis === "masuk" ? "+" : "-"} {formatRupiah(t.jumlah)}
+                  {t.jenis === "masuk" ? "+" : "-"} {formatRupiah(Number(t.jumlah))}
                 </p>
               </div>
             ))

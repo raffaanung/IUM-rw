@@ -115,6 +115,11 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Hide Next.js Dev Overlay */
+nextjs-portal {
+  display: none !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

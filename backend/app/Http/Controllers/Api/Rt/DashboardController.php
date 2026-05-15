@@ -21,19 +21,29 @@ class DashboardController extends Controller
         }
 
         $totalWarga = Warga::where('rt', $rt)->count();
-        $totalKK = KartuKeluarga::whereHas('kepalaKeluarga', function($q) use ($rt) {
-             $q->where('rt', $rt);
-        })->count();
+        $totalKK = KartuKeluarga::where('rt', $rt)->count();
 
-        $lakiLaki = Warga::where('rt', $rt)->where('jenis_kelamin', 'Laki-laki')->count();
-        $perempuan = Warga::where('rt', $rt)->where('jenis_kelamin', 'Perempuan')->count();
-        $wargaTetap = Warga::where('rt', $rt)->where('status_warga', 'Tetap')->count();
-        $wargaPendatang = Warga::where('rt', $rt)->where('status_warga', 'Pendatang')->count();
+        $lakiLaki = Warga::where('rt', $rt)->where('jenis_kelamin', 'L')->count();
+        $perempuan = Warga::where('rt', $rt)->where('jenis_kelamin', 'P')->count();
+        $wargaTetap = Warga::where('rt', $rt)->where('status_warga', 'tetap')->count();
+        $wargaDomisili = Warga::where('rt', $rt)->where('status_warga', 'pendatang')->count();
+        $wargaKontrak = Warga::where('rt', $rt)->where('status_warga', 'kontrak')->count();
 
-        $usiaBalita = Warga::where('rt', $rt)->whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) <= 4')->count();
-        $usiaAnak = Warga::where('rt', $rt)->whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) BETWEEN 5 AND 17')->count();
-        $usiaDewasa = Warga::where('rt', $rt)->whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) BETWEEN 18 AND 59')->count();
-        $usiaLansia = Warga::where('rt', $rt)->whereRaw('TIMESTAMPDIFF(YEAR, tanggal_lahir, CURDATE()) >= 60')->count();
+        // Calculate ages in PHP to be database-agnostic
+        $warga = Warga::where('rt', $rt)->get(['tanggal_lahir']);
+        $usiaBalita = 0;
+        $usiaAnak = 0;
+        $usiaDewasa = 0;
+        $usiaLansia = 0;
+
+        $now = now();
+        foreach ($warga as $w) {
+            $age = $w->tanggal_lahir->diffInYears($now);
+            if ($age <= 4) $usiaBalita++;
+            elseif ($age <= 17) $usiaAnak++;
+            elseif ($age <= 59) $usiaDewasa++;
+            else $usiaLansia++;
+        }
 
         $statistikPekerjaan = Warga::where('rt', $rt)
             ->whereNotNull('pekerjaan')
@@ -41,47 +51,60 @@ class DashboardController extends Controller
             ->groupBy('pekerjaan')
             ->pluck('total', 'pekerjaan');
 
-        $totalPemasukan = Transaksi::where('rt', $rt)->where('jenis_transaksi', 'masuk')->sum('nominal');
-        $totalPengeluaran = Transaksi::where('rt', $rt)->where('jenis_transaksi', 'keluar')->sum('nominal');
+        $totalPemasukan = Transaksi::where('rt', $rt)
+            ->where('jenis', 'pemasukan')
+            ->sum('jumlah');
+            
+        $totalPengeluaran = Transaksi::where('rt', $rt)
+            ->where('jenis', 'pengeluaran')
+            ->sum('jumlah');
+            
         $saldoKas = $totalPemasukan - $totalPengeluaran;
 
-        $transaksiTerbaru = Transaksi::where('rt', $rt)
-            ->orderBy('tanggal_transaksi', 'desc')
+        $transaksiTerbaru = Transaksi::with('user:id,name')->where('rt', $rt)
+            ->orderBy('tanggal', 'desc')
             ->orderBy('id', 'desc')
             ->take(5)
-            ->get();
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'keterangan' => $t->judul,
+                    'tanggal' => $t->tanggal,
+                    'jenis' => $t->jenis,
+                    'jumlah' => $t->jumlah,
+                    'kategori' => $t->kategori,
+                    'rt' => $t->rt,
+                    'pencatat' => $t->user ? $t->user->name : ($t->pencatat ?? 'Sistem'),
+                ];
+            });
 
         $data = [
-            'rt' => $rt,
-            'summary' => [
-                'total_kk' => $totalKK,
+            'statistik' => [
                 'total_warga' => $totalWarga,
+                'total_kk'    => $totalKK,
+                'laki_laki'   => $lakiLaki,
+                'perempuan'   => $perempuan,
+                'tetap'       => $wargaTetap,
+                'domisili'    => $wargaDomisili,
+                'kontrak'     => $wargaKontrak,
+                'pendatang'   => $wargaDomisili,
             ],
-            'demografi' => [
-                'jenis_kelamin' => [
-                    'laki_laki' => $lakiLaki,
-                    'perempuan' => $perempuan,
-                ],
-                'status_kependudukan' => [
-                    'tetap' => $wargaTetap,
-                    'pendatang' => $wargaPendatang,
-                ],
-                'distribusi_usia' => [
-                    'balita_0_4' => $usiaBalita,
-                    'anak_5_17' => $usiaAnak,
-                    'dewasa_18_59' => $usiaDewasa,
-                    'lansia_60_plus' => $usiaLansia,
-                ],
-                'pekerjaan' => $statistikPekerjaan
+            'usia' => [
+                'balita'  => $usiaBalita,
+                'anak'    => $usiaAnak,
+                'dewasa'  => $usiaDewasa,
+                'lansia'  => $usiaLansia,
             ],
+            'pekerjaan' => $statistikPekerjaan,
             'keuangan' => [
-                'saldo_kas' => $saldoKas,
-                'total_pemasukan' => $totalPemasukan,
-                'total_pengeluaran' => $totalPengeluaran,
+                'pemasukan'   => $totalPemasukan,
+                'pengeluaran' => $totalPengeluaran,
+                'saldo'       => $saldoKas,
             ],
             'transaksi_terbaru' => $transaksiTerbaru
         ];
 
-        return $this->sendResponse($data, 'Data dashboard RT berhasil dimuat.');
+        return $this->sendResponse($data, 'Ringkasan dashboard RT berhasil diambil.');
     }
 }
