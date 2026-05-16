@@ -9,7 +9,7 @@ Berikut adalah ringkasan apa yang telah dikerjakan dari awal hingga saat ini:
 ### 1. Inisialisasi & Setup Lingkungan
 - **Clone Repository**: Menggabungkan Backend (Laravel 12) dan Frontend (Next.js).
 - **Struktur Proyek**: Memisahkan kode menjadi dua folder utama: `/backend` dan `/frontend` untuk kemudahan manajemen.
-- **Database**: Menggunakan SQLite untuk database lokal yang ringan dan cepat.
+- **Database**: Menggunakan SQL untuk database lokal yang ringan dan cepat.
 - **Dependency**: Instalasi `composer` (PHP) dan `npm` (Node.js) untuk kedua sisi aplikasi.
 
 ### 2. Backend (API Laravel)
