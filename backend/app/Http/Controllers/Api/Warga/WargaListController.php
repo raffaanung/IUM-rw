@@ -151,7 +151,8 @@ class WargaListController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'alamat' => 'sometimes|required|string',
+            'alamat_ktp' => 'nullable|string',
+            'alamat_sekarang' => 'sometimes|required|string',
             'pekerjaan' => 'nullable|string',
             'pendidikan' => 'nullable|string',
             'pendapatan' => 'nullable|numeric|min:0',
@@ -164,7 +165,8 @@ class WargaListController extends Controller
         }
 
         $profilWarga->update($request->only([
-            'alamat',
+            'alamat_ktp',
+            'alamat_sekarang',
             'pekerjaan',
             'pendidikan',
             'pendapatan',

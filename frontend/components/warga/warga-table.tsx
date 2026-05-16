@@ -89,7 +89,7 @@ export function WargaTable({ data, detailHrefBase, showRT = true, canManage = tr
         !q ||
         w.nama.toLowerCase().includes(q) ||
         w.nik.includes(q) ||
-        w.alamat.toLowerCase().includes(q)
+        (w.alamat_sekarang || "").toLowerCase().includes(q)
       const matchStatus = statusFilter === "all" || w.statusKependudukan === statusFilter
       const matchRT = rtFilter === "all" || w.rt === rtFilter
       return matchSearch && matchStatus && matchRT
@@ -102,7 +102,7 @@ export function WargaTable({ data, detailHrefBase, showRT = true, canManage = tr
       w.nik,
       w.nama,
       w.jenisKelamin,
-      w.alamat,
+      w.alamat_sekarang || "",
       w.rt,
       w.statusKependudukan
     ])
@@ -216,7 +216,7 @@ export function WargaTable({ data, detailHrefBase, showRT = true, canManage = tr
                   <TableCell className="font-mono text-xs">{w.nik}</TableCell>
                   <TableCell className="font-medium">{w.nama}</TableCell>
                   <TableCell>{w.jenisKelamin}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{w.alamat}</TableCell>
+                  <TableCell className="max-w-[200px] truncate">{w.alamat_sekarang || "—"}</TableCell>
                   {showRT ? <TableCell>RT {w.rt}</TableCell> : null}
                   <TableCell>
                     <StatusBadge status={w.statusKependudukan} />

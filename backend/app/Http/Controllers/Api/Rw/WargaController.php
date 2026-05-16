@@ -52,7 +52,7 @@ class WargaController extends Controller
             'jenis_kelamin' => 'required|in:L,P',
             'tempat_lahir' => 'required|string',
             'tanggal_lahir' => 'required|date',
-            'alamat' => 'required|string',
+            'alamat_sekarang' => 'required|string',
             'rt' => 'required|string',
             'rw' => 'required|string',
             'status_warga' => 'required|in:tetap,kontrak,pendatang',

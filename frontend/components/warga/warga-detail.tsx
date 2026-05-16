@@ -63,6 +63,7 @@ export function WargaDetail({ warga, backHref, canEdit = true }: WargaDetailProp
             <div className="space-y-3 text-left">
               <InfoRow icon={Calendar} label="Usia" value={`${age} tahun`} />
               <InfoRow icon={MapPin} label="Domisili" value={`RT ${warga.rt} / RW ${warga.rw}`} />
+              <InfoRow icon={MapPin} label="Alamat" value={warga.alamat_sekarang || "—"} />
               {warga.noTelepon ? <InfoRow icon={Phone} label="Telepon" value={warga.noTelepon} /> : null}
               {warga.email ? <InfoRow icon={Mail} label="Email" value={warga.email} /> : null}
             </div>
@@ -86,6 +87,8 @@ export function WargaDetail({ warga, backHref, canEdit = true }: WargaDetailProp
               <DetailItem label="Kewarganegaraan" value={warga.kewarganegaraan} />
               <DetailItem label="Status Perkawinan" value={warga.statusPerkawinan} />
               <DetailItem label="Hubungan dalam Keluarga" value={warga.hubunganKeluarga} />
+              <DetailItem label="Alamat KTP" value={warga.alamat_ktp || "—"} className="sm:col-span-2" />
+              <DetailItem label="Alamat Sekarang" value={warga.alamat_sekarang || "—"} className="sm:col-span-2" />
             </CardContent>
           </Card>
 
@@ -110,7 +113,8 @@ export function WargaDetail({ warga, backHref, canEdit = true }: WargaDetailProp
               <CardTitle className="text-base">Alamat & Domisili</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-              <DetailItem label="Alamat Lengkap" value={warga.alamat} className="sm:col-span-2" />
+              <DetailItem label="Alamat Sekarang" value={warga.alamat_sekarang || "—"} className="sm:col-span-2" />
+              <DetailItem label="Alamat KTP" value={warga.alamat_ktp || "—"} className="sm:col-span-2" />
               <DetailItem label="RT" value={warga.rt} />
               <DetailItem label="RW" value={warga.rw} />
               <DetailItem label="Status Kependudukan" value={warga.statusKependudukan} />

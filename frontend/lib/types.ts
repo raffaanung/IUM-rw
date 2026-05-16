@@ -35,7 +35,8 @@ export interface Warga {
   statusPerkawinan: StatusPerkawinan
   hubunganKeluarga: HubunganKeluarga
   kewarganegaraan: string
-  alamat: string
+  alamat_ktp?: string
+  alamat_sekarang?: string
   rt: string
   rw: string
   statusKependudukan: StatusKependudukan

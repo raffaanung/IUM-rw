@@ -14,7 +14,6 @@ class Warga extends Model
         'jenis_kelamin',
         'tempat_lahir',
         'tanggal_lahir',
-        'alamat',
         'rt',
         'rw',
         'status_warga',
@@ -23,6 +22,8 @@ class Warga extends Model
         'pendidikan',
         'pendapatan',
         'agama',
+        'alamat_ktp',
+        'alamat_sekarang',
         'no_hp',
         'foto',
     ];

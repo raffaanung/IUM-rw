@@ -8,7 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { formatRupiah, formatTanggal } from "@/lib/mock-data"
-import { ArrowDownCircle, ArrowUpCircle, Eye, Wallet } from "lucide-react"
+import {
+  JenisKelaminChart,
+  StatusKependudukanChart,
+} from "@/components/dashboard/demografi-charts"
+import { ArrowDownCircle, ArrowUpCircle, Eye, IdCard, Loader2, Users, Wallet } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -18,11 +22,20 @@ export function WargaDashboardClient() {
 
   const [effectiveRt, setEffectiveRt] = useState(user.rt)
   const [loading, setLoading] = useState(true)
-  const [saldo, setSaldo] = useState(0)
-  const [masuk, setMasuk] = useState(0)
-  const [keluar, setKeluar] = useState(0)
-  const [recent, setRecent] = useState<any[]>([])
-  const [statusWarga, setStatusWarga] = useState<string | null>(null)
+  const [data, setData] = useState({
+    totalKK: 0,
+    totalWarga: 0,
+    lakiLaki: 0,
+    perempuan: 0,
+    tetap: 0,
+    domisili: 0,
+    kontrak: 0,
+    saldo: 0,
+    pemasukan: 0,
+    pengeluaran: 0,
+    transaksi: [] as any[],
+    statusWarga: null as string | null,
+  })
 
   useEffect(() => {
     const run = async () => {
@@ -31,17 +44,21 @@ export function WargaDashboardClient() {
         const json = await res.json()
         if (json.success) {
           if (json.data.user?.rt) setEffectiveRt(String(json.data.user.rt))
-          setSaldo(Number(json.data.keuangan?.saldo_kas || 0))
-          setMasuk(Number(json.data.keuangan?.total_pemasukan || 0))
-          setKeluar(Number(json.data.keuangan?.total_pengeluaran || 0))
-          setRecent(Array.isArray(json.data.transaksi_terbaru) ? json.data.transaksi_terbaru : [])
-
-          const self = json.data.profil_warga
-          if (self && self.status_warga) {
-            setStatusWarga(String(self.status_warga))
-          } else {
-            setStatusWarga(null)
-          }
+          
+          setData({
+            totalKK: json.data.statistik?.total_kk || 0,
+            totalWarga: json.data.statistik?.total_warga || 0,
+            lakiLaki: json.data.statistik?.laki_laki || 0,
+            perempuan: json.data.statistik?.perempuan || 0,
+            tetap: json.data.statistik?.tetap || 0,
+            domisili: json.data.statistik?.domisili || 0,
+            kontrak: json.data.statistik?.kontrak || 0,
+            saldo: Number(json.data.keuangan?.saldo_kas || 0),
+            pemasukan: Number(json.data.keuangan?.total_pemasukan || 0),
+            pengeluaran: Number(json.data.keuangan?.total_pengeluaran || 0),
+            transaksi: Array.isArray(json.data.transaksi_terbaru) ? json.data.transaksi_terbaru : [],
+            statusWarga: json.data.profil_warga?.status_warga ? String(json.data.profil_warga.status_warga) : null,
+          })
         }
       } catch {
         // ignore
@@ -80,39 +97,49 @@ export function WargaDashboardClient() {
               <h2 className="text-xl font-bold">{user.nama}</h2>
               <p className="text-sm opacity-80 mt-1">
                 Warga RT {user.rt} / RW {user.rw}
-                {statusWarga ? ` · ${statusWarga}` : ""}
+                {data.statusWarga ? ` · ${data.statusWarga}` : ""}
               </p>
             </div>
           </div>
-          <Button asChild variant="secondary">
-            <Link href="/warga/daftar-warga">
-              <Eye className="size-4" />
-              Lihat Profil
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/warga/daftar-warga">
+                <Eye className="size-4 mr-2" />
+                Lihat Profil
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard title="Total KK" value={data.totalKK} icon={IdCard} variant="primary" />
         <StatCard
-          title="Saldo Kas RT"
-          value={formatRupiah(saldo)}
-          description={`RT ${effectiveRt}`}
-          icon={Wallet}
+          title="Total Warga"
+          value={data.totalWarga}
+          description={`${data.lakiLaki} L · ${data.perempuan} P`}
+          icon={Users}
           variant="primary"
         />
         <StatCard
-          title="Pemasukan"
-          value={formatRupiah(masuk)}
-          icon={ArrowUpCircle}
+          title="Saldo Kas RT"
+          value={formatRupiah(data.saldo)}
+          description={`${formatRupiah(data.pemasukan)} masuk`}
+          icon={Wallet}
           variant="success"
         />
         <StatCard
-          title="Pengeluaran"
-          value={formatRupiah(keluar)}
-          icon={ArrowDownCircle}
-          variant="danger"
+          title="Warga Tetap"
+          value={data.tetap}
+          description={`${data.domisili + data.kontrak} pendatang`}
+          icon={Users}
+          variant="warning"
         />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <StatusKependudukanChart data={data} />
+        <JenisKelaminChart data={data} />
       </div>
 
       <Card>
@@ -127,21 +154,23 @@ export function WargaDashboardClient() {
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Memuat...</p>
-          ) : recent.length === 0 ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : data.transaksi.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">Belum ada transaksi tercatat.</p>
           ) : (
-            recent.map((t) => (
+            data.transaksi.map((t) => (
               <div key={t.id} className="flex items-center justify-between gap-3 pb-3 border-b last:border-0 last:pb-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={
-                      t.jenis === "masuk"
+                      (t.jenis === "masuk" || t.jenis === "pemasukan")
                         ? "size-9 shrink-0 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"
                         : "size-9 shrink-0 rounded-full bg-destructive/15 text-destructive flex items-center justify-center"
                     }
                   >
-                    {t.jenis === "masuk" ? <ArrowUpCircle className="size-4" /> : <ArrowDownCircle className="size-4" />}
+                    {(t.jenis === "masuk" || t.jenis === "pemasukan") ? <ArrowUpCircle className="size-4" /> : <ArrowDownCircle className="size-4" />}
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium truncate">{t.keterangan}</p>
@@ -155,12 +184,12 @@ export function WargaDashboardClient() {
                 </div>
                 <p
                   className={
-                    t.jenis === "masuk"
+                    (t.jenis === "masuk" || t.jenis === "pemasukan")
                       ? "font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap"
                       : "font-semibold text-destructive whitespace-nowrap"
                   }
                 >
-                  {t.jenis === "masuk" ? "+" : "-"} {formatRupiah(Number(t.jumlah))}
+                  {(t.jenis === "masuk" || t.jenis === "pemasukan") ? "+" : "-"} {formatRupiah(Number(t.jumlah))}
                 </p>
               </div>
             ))

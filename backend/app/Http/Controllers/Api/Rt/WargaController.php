@@ -53,7 +53,7 @@ class WargaController extends Controller
             'status_warga' => 'required|in:tetap,kontrak,pendatang',
             'tempat_lahir' => 'required|string',
             'tanggal_lahir' => 'required|date',
-            'alamat' => 'required|string',
+            'alamat_sekarang' => 'required|string',
             'rw' => 'required|string',
             'status_pernikahan' => 'required|in:belum_menikah,menikah,cerai',
         ]);

@@ -58,7 +58,8 @@ export function WargaFormDialog({ rt, onSuccess, initialData, mode = "add", trig
     jenis_kelamin: initialData?.jenisKelamin === "Laki-laki" ? "L" : initialData?.jenisKelamin === "Perempuan" ? "P" : "",
     tempat_lahir: initialData?.tempatLahir || "",
     tanggal_lahir: formatDateForInput(initialData?.tanggalLahir),
-    alamat: initialData?.alamat || "",
+    alamat_ktp: initialData?.alamat_ktp || "",
+    alamat_sekarang: initialData?.alamat_sekarang || "",
     rt: initialData?.rt || rt || "",
     rw: initialData?.rw || "8",
     status_warga: initialData?.statusKependudukan?.toLowerCase() || "",
@@ -79,7 +80,8 @@ export function WargaFormDialog({ rt, onSuccess, initialData, mode = "add", trig
         jenis_kelamin: initialData.jenisKelamin === "Laki-laki" ? "L" : "P",
         tempat_lahir: initialData.tempatLahir,
         tanggal_lahir: formatDateForInput(initialData.tanggalLahir),
-        alamat: initialData.alamat,
+        alamat_ktp: initialData.alamat_ktp || "",
+        alamat_sekarang: initialData.alamat_sekarang || "",
         rt: initialData.rt,
         rw: initialData.rw,
         status_warga: initialData.statusKependudukan.toLowerCase(),
@@ -272,12 +274,21 @@ export function WargaFormDialog({ rt, onSuccess, initialData, mode = "add", trig
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="alamat">Alamat</Label>
+              <Label htmlFor="alamat_ktp">Alamat KTP</Label>
               <Input
-                id="alamat"
-                placeholder="Alamat lengkap"
-                value={formData.alamat}
-                onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
+                id="alamat_ktp"
+                placeholder="Alamat sesuai KTP"
+                value={formData.alamat_ktp}
+                onChange={(e) => setFormData({ ...formData, alamat_ktp: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="alamat_sekarang">Alamat Sekarang</Label>
+              <Input
+                id="alamat_sekarang"
+                placeholder="Alamat domisili saat ini"
+                value={formData.alamat_sekarang}
+                onChange={(e) => setFormData({ ...formData, alamat_sekarang: e.target.value })}
                 required
               />
             </div>
