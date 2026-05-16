@@ -42,7 +42,10 @@ Berikut adalah ringkasan apa yang telah dikerjakan dari awal hingga saat ini:
 
 ---
 
-## 🛠 Cara Menjalankan
+## Cara Menjalankan
+
+## ambil database 
+- ada difolder database copy ke sql admin
 
 ### Backend (Laravel)
 1. Masuk ke folder `backend`.
